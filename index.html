@@ -390,6 +390,10 @@ body {
   <div id="page-test" class="page">
     <button class="back-btn" onclick="showPage('home')">< 뒤로</button>
     <div class="page-header">문장 테스트</div>
+    <div class="setting-row" style="margin-bottom:12px;">
+      <div class="setting-label">병음 힌트</div>
+      <div class="toggle" id="pinyin-toggle" onclick="togglePinyin()"></div>
+    </div>
     <div class="chips" id="test-level-chips">
       <div class="chip active" data-level="all" onclick="filterTestSets('all')">All</div>
       <div class="chip" data-level="1-2" onclick="filterTestSets('1-2')">1-2</div>
@@ -480,17 +484,43 @@ body {
       타이핑 연습
       <small>IBT 시험 형식 중국어 입력</small>
     </div>
-    <div class="typing-area">
-      <div class="typing-prompt" id="typing-prompt"></div>
-      <textarea class="typing-input" id="typing-input" placeholder="여기에 중국어 문장을 입력하세요..." lang="zh-CN" inputmode="text"></textarea>
+    <div class="mode-selector">
+      <div class="mode-card active" onclick="setTypingMode('type')" id="tmode-type">
+        <div class="mode-icon">&#x2328;</div>
+        <div class="mode-title">직접 입력</div>
+        <div class="mode-desc">문장 전체 타이핑</div>
+      </div>
+      <div class="mode-card" onclick="setTypingMode('order')" id="tmode-order">
+        <div class="mode-icon">&#x1F500;</div>
+        <div class="mode-title">어순 맞추기</div>
+        <div class="mode-desc">단어를 순서대로 배열</div>
+      </div>
     </div>
-    <div class="btn-group">
-      <button class="btn btn-outline" onclick="showTypingAnswer()">정답 보기</button>
-      <button class="btn btn-primary" onclick="nextTypingQuestion()">다음</button>
+    <div id="typing-type-area">
+      <div class="typing-area">
+        <div class="typing-prompt" id="typing-prompt"></div>
+        <textarea class="typing-input" id="typing-input" placeholder="여기에 중국어 문장을 입력하세요..." lang="zh-CN" inputmode="text"></textarea>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="showTypingAnswer()">정답 보기</button>
+        <button class="btn btn-primary" onclick="nextTypingQuestion()">다음</button>
+      </div>
+      <div id="typing-answer" style="display:none; margin-top:16px; padding:16px; background:var(--card); border-radius:12px;">
+        <div style="font-size:12px; color:var(--text2); margin-bottom:8px;">정답:</div>
+        <div id="typing-answer-text" style="font-size:20px; line-height:1.6;"></div>
+      </div>
     </div>
-    <div id="typing-answer" style="display:none; margin-top:16px; padding:16px; background:var(--card); border-radius:12px;">
-      <div style="font-size:12px; color:var(--text2); margin-bottom:8px;">정답:</div>
-      <div id="typing-answer-text" style="font-size:20px; line-height:1.6;"></div>
+    <div id="typing-order-area" style="display:none;">
+      <div class="typing-area">
+        <div id="order-prompt" style="font-size:16px; margin-bottom:12px;"></div>
+        <div id="order-selected" style="min-height:50px; padding:12px; background:var(--bg); border-radius:12px; border:2px solid #333; margin-bottom:12px; font-size:20px; line-height:2; word-spacing:4px;"></div>
+        <div id="order-choices" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="resetOrder()">초기화</button>
+        <button class="btn btn-primary" onclick="checkOrder()">확인</button>
+      </div>
+      <div id="order-feedback" style="display:none; margin-top:12px; padding:16px; background:var(--card); border-radius:12px;"></div>
     </div>
   </div>
 
@@ -532,6 +562,18 @@ let testSets = [];
 let secretNotes = [];
 let srsData = {};
 let stats = { streak: 0, lastDate: '', todayCount: 0, totalReviewed: 0 };
+let showPinyin = JSON.parse(localStorage.getItem('hsk4_showPinyin') ?? 'false');
+
+function togglePinyin() {
+  showPinyin = !showPinyin;
+  localStorage.setItem('hsk4_showPinyin', JSON.stringify(showPinyin));
+  document.getElementById('pinyin-toggle').classList.toggle('on', showPinyin);
+}
+
+// Init pinyin toggle on load
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('pinyin-toggle').classList.toggle('on', showPinyin);
+});
 
 // Load data
 async function loadData() {
@@ -742,12 +784,12 @@ function renderQuizQuestion() {
   const container = document.getElementById('quiz-content');
   container.innerHTML = `
     <div class="quiz-korean">${q.korean}</div>
-    <div class="quiz-pinyin">${q.pinyins.join('  |  ')}</div>
+    ${showPinyin ? `<div class="quiz-pinyin">${q.pinyins.join('  |  ')}</div>` : ''}
     <div class="quiz-sentence">${q.chineseTemplate.replace(/\t+/g, ' <span class="blank">___</span> ')}</div>
     <div style="margin-bottom:12px;">
       ${q.pinyins.map((p, i) => `
         <div style="margin-bottom:8px;">
-          <div style="font-size:12px; color:var(--warning); margin-bottom:4px;">${p}</div>
+          ${showPinyin ? `<div style="font-size:12px; color:var(--warning); margin-bottom:4px;">${p}</div>` : `<div style="font-size:12px; color:#555; margin-bottom:4px;">Blank ${i+1}</div>`}
           <input type="text" class="quiz-input" id="qi-${i}" lang="zh-CN"
             placeholder="중국어 입력..." style="width:100%; padding:10px; font-size:18px;
             background:var(--card2); border:2px solid #333; border-radius:10px; color:var(--text); outline:none;"
@@ -927,7 +969,7 @@ function renderFlashcard() {
     <div class="flashcard" onclick="flipFlashcard()">
       <div><span class="srs-dot ${srsClass}"></span><span style="font-size:11px;color:var(--text2);">Lv.${srs.level}</span></div>
       <div class="chinese">${w.chinese}</div>
-      <div class="pinyin">${w.pinyin}</div>
+      ${showPinyin ? `<div class="pinyin">${w.pinyin}</div>` : ''}
       <div class="${fcState.revealed ? 'revealed' : 'hidden'}">
         <div class="pos">${w.pos}</div>
         <div class="meaning">${w.meaning}</div>
@@ -1000,7 +1042,7 @@ function renderWordQuiz() {
       <div class="quiz-korean" style="text-align:center;">
         <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">중국어로 쓰세요:</div>
         <div style="font-size:18px;">${w.meaning}</div>
-        <div style="font-size:13px; color:var(--warning); margin-top:4px;">(${w.pinyin})</div>
+        ${showPinyin ? `<div style="font-size:13px; color:var(--warning); margin-top:4px;">(${w.pinyin})</div>` : ''}
       </div>
       <div style="margin:16px 0;">
         <input type="text" id="wq-input" lang="zh-CN" placeholder="중국어 입력..."
@@ -1017,7 +1059,7 @@ function renderWordQuiz() {
       <div style="text-align:center; padding:24px;">
         <div style="font-size:13px; color:var(--text2); margin-bottom:12px;">무슨 뜻일까요?</div>
         <div style="font-size:36px; font-weight:700; margin-bottom:8px;">${w.chinese}</div>
-        <div style="font-size:14px; color:var(--warning);">${w.pinyin}</div>
+        ${showPinyin ? `<div style="font-size:14px; color:var(--warning);">${w.pinyin}</div>` : ''}
       </div>
       <div style="margin:16px 0;">
         <input type="text" id="wq-input" placeholder="한국어 뜻 입력..."
@@ -1053,9 +1095,10 @@ function checkWordQuiz(answer) {
 
 function checkWordQuizMeaning(answer) {
   const input = document.getElementById('wq-input').value.trim();
-  // Flexible matching - check if any part of the meaning matches
+  if (!input) { showWordQuizFeedback(false, answer); return; }
+  // Match if input is at least 2 chars and matches one of the meanings
   const meanings = answer.split(/[,，]/).map(m => m.trim());
-  const correct = meanings.some(m => input.includes(m) || m.includes(input));
+  const correct = input.length >= 2 && meanings.some(m => m === input || (input.length >= 2 && m.includes(input) && input.length >= m.length * 0.5));
   showWordQuizFeedback(correct, answer);
 }
 
@@ -1075,6 +1118,7 @@ function showWordQuizFeedback(correct, answer) {
     <div style="font-size:16px;">${w.chinese} (${w.pinyin})</div>
     <div style="font-size:14px; color:var(--text2);">${w.meaning}</div>
     <div style="font-size:14px; margin-top:8px;">${w.example}</div>
+    <div style="font-size:12px; color:var(--warning); margin-top:2px;">${w.pinyin}</div>
     <div style="font-size:12px; color:var(--text2);">${w.exampleKo}</div>
     <button class="btn btn-outline btn-block" style="margin-top:12px;" onclick="wqState.current++; renderWordQuiz();">다음</button>`;
 }
@@ -1096,14 +1140,10 @@ let audioState = { level: '1-2', tracks: [], currentTrack: -1 };
 let audioEl = null;
 
 function getAudioPath(level, trackNum) {
-  const folderMap = {
-    '1-2': '문장으로끝내는 단어장 1,2급 MP3',
-    '3': '문장으로끝내는 단어장 3급 MP3',
-    '4': '문장으로끝내는 단어장 4급 MP3'
-  };
+  const folderMap = { '1-2': 'level-12', '3': 'level-3', '4': 'level-4' };
   const prefix = level === '1-2' ? '1,2' : level;
   const num = String(trackNum).padStart(2, '0');
-  return `../Downloads/문장으로끝내는 단어장 1-4급/${folderMap[level]}/Track ${prefix}-${num}.mp3`;
+  return `audio/${folderMap[level]}/Track ${prefix}-${num}.mp3`;
 }
 
 function filterAudio(level) {
@@ -1163,7 +1203,7 @@ function togglePlay() {
   }
 }
 
-function play다음() {
+function playNext() {
   const next = audioState.currentTrack + 1;
   if (next <= audioState.tracks.length) {
     playTrack(audioState.level, next);
@@ -1236,7 +1276,117 @@ function showTypingAnswer() {
 
 function nextTypingQuestion() {
   currentTypingIdx++;
-  renderTypingQuestion();
+  if (typingMode === 'type') renderTypingQuestion();
+  else renderOrderQuestion();
+}
+
+// =================== TYPING MODE TOGGLE ===================
+let typingMode = 'type';
+
+function setTypingMode(mode) {
+  typingMode = mode;
+  document.getElementById('tmode-type').classList.toggle('active', mode === 'type');
+  document.getElementById('tmode-order').classList.toggle('active', mode === 'order');
+  document.getElementById('typing-type-area').style.display = mode === 'type' ? 'block' : 'none';
+  document.getElementById('typing-order-area').style.display = mode === 'order' ? 'block' : 'none';
+  if (mode === 'order') renderOrderQuestion();
+  else renderTypingQuestion();
+}
+
+// =================== WORD ORDER QUIZ ===================
+let orderState = { answer: [], selected: [], remaining: [] };
+
+function segmentSentence(sentence) {
+  // Segment Chinese sentence into meaningful chunks
+  // Remove trailing punctuation for segmentation, add back later
+  const punct = sentence.match(/[。？！，、；：""''（）]+$/);
+  const clean = punct ? sentence.slice(0, -punct[0].length) : sentence;
+
+  // Split by common patterns: particles, measure words, etc.
+  // Use a simple greedy approach: 2-3 char segments
+  const segments = [];
+  let i = 0;
+  while (i < clean.length) {
+    // Try 4, 3, 2, then 1 character chunks
+    let chunkSize = Math.min(4, clean.length - i);
+    if (clean.length - i <= 2) chunkSize = clean.length - i;
+    else chunkSize = 2 + Math.floor(Math.random() * 2); // 2-3 chars randomly
+    chunkSize = Math.min(chunkSize, clean.length - i);
+    segments.push(clean.slice(i, i + chunkSize));
+    i += chunkSize;
+  }
+  if (punct) segments.push(punct[0]);
+  return segments;
+}
+
+function renderOrderQuestion() {
+  if (typingWords.length === 0) return;
+  const q = typingWords[currentTypingIdx % typingWords.length];
+
+  const segments = segmentSentence(q.chinese);
+  orderState.answer = [...segments];
+  orderState.selected = [];
+  orderState.remaining = [...segments].sort(() => Math.random() - 0.5);
+
+  document.getElementById('order-prompt').innerHTML = `
+    <div style="font-size:14px; color:var(--text2); margin-bottom:8px;">단어를 올바른 순서로 배열하세요:</div>
+    <div style="font-size:16px; margin-bottom:8px;">${q.korean}</div>
+    <div style="font-size:13px; color:var(--warning);">핵심 단어: ${q.word} (${q.pinyin})</div>`;
+
+  updateOrderDisplay();
+  document.getElementById('order-feedback').style.display = 'none';
+}
+
+function updateOrderDisplay() {
+  document.getElementById('order-selected').innerHTML =
+    orderState.selected.length === 0
+      ? '<span style="color:#555;">여기를 탭하여 단어를 배열하세요</span>'
+      : orderState.selected.map((s, i) =>
+          `<span onclick="unselectOrder(${i})" style="display:inline-block;padding:4px 10px;margin:2px;background:var(--accent2);border-radius:8px;cursor:pointer;font-size:18px;">${s}</span>`
+        ).join('');
+
+  document.getElementById('order-choices').innerHTML =
+    orderState.remaining.map((s, i) =>
+      `<span onclick="selectOrder(${i})" style="display:inline-block;padding:8px 14px;background:var(--card);border:1px solid #444;border-radius:10px;cursor:pointer;font-size:18px;transition:all .15s;">${s}</span>`
+    ).join('');
+}
+
+function selectOrder(idx) {
+  const word = orderState.remaining.splice(idx, 1)[0];
+  orderState.selected.push(word);
+  updateOrderDisplay();
+}
+
+function unselectOrder(idx) {
+  const word = orderState.selected.splice(idx, 1)[0];
+  orderState.remaining.push(word);
+  updateOrderDisplay();
+}
+
+function resetOrder() {
+  orderState.selected = [];
+  orderState.remaining = [...orderState.answer].sort(() => Math.random() - 0.5);
+  updateOrderDisplay();
+  document.getElementById('order-feedback').style.display = 'none';
+}
+
+function checkOrder() {
+  const userAnswer = orderState.selected.join('');
+  const correctAnswer = orderState.answer.join('');
+  const correct = userAnswer === correctAnswer;
+
+  const fb = document.getElementById('order-feedback');
+  fb.style.display = 'block';
+  fb.style.background = correct ? '#22c55e22' : '#ef444422';
+  fb.innerHTML = `
+    <div style="color:${correct ? 'var(--success)' : 'var(--danger)'}; font-weight:600; margin-bottom:8px;">
+      ${correct ? '정답!' : '오답!'}
+    </div>
+    <div style="font-size:14px; color:var(--text2); margin-bottom:4px;">정답:</div>
+    <div style="font-size:20px;">${correctAnswer}</div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="currentTypingIdx++; renderOrderQuestion();">다음</button>`;
+
+  recordReview();
 }
 
 // =================== DAILY REVIEW ===================
