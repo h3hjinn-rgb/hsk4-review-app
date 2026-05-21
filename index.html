@@ -1280,7 +1280,7 @@ function showTypingAnswer() {
       html += `<span style="color:var(--danger);">${correct[i]}</span>`;
     }
   }
-  document.getElementById('typing-answer-text').innerHTML = html;
+  document.getElementById('typing-answer-text').innerHTML = html + `<div style="font-size:13px; color:var(--warning); margin-top:6px;">${toPinyin(correct)}</div>`;
   recordReview();
 }
 
@@ -1394,6 +1394,7 @@ function checkOrder() {
     </div>
     <div style="font-size:14px; color:var(--text2); margin-bottom:4px;">정답:</div>
     <div style="font-size:20px;">${correctAnswer}</div>
+    <div style="font-size:13px; color:var(--warning); margin-top:4px;">${toPinyin(correctAnswer)}</div>
     <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="currentTypingIdx++; renderOrderQuestion();">다음</button>`;
 
   recordReview();
