@@ -2008,11 +2008,8 @@ function checkOrder() {
   });
 }
 
-// =================== AI QUESTION (ChatGPT API) ===================
+// =================== AI QUESTION (Clipboard + Open App) ===================
 let _askSentence = '', _askKorean = '';
-
-function getApiKey() { return localStorage.getItem('hsk4_openai_key') || ''; }
-function setApiKey(key) { localStorage.setItem('hsk4_openai_key', key); }
 
 function toggleAskAI(sentence, korean) {
   showAskAIPanel('ask-ai-area', sentence, korean);
@@ -2023,108 +2020,42 @@ function showAskAIPanel(containerId, sentence, korean) {
   _askKorean = korean;
   const area = document.getElementById(containerId);
   if (!area) return;
-
-  const hasKey = !!getApiKey();
   area.innerHTML = `
     <div style="background:var(--card); border-radius:12px; padding:12px; border:1px solid #a78bfa33;">
-      ${!hasKey ? `
-        <div style="font-size:12px; color:var(--warning); margin-bottom:8px;">OpenAI API 키를 입력하세요 (최초 1회)</div>
-        <input type="password" id="api-key-input" placeholder="sk-..." style="width:100%;padding:10px;font-size:13px;background:var(--bg);border:1px solid #333;border-radius:8px;color:var(--text);outline:none;margin-bottom:8px;">
-        <button class="btn btn-outline btn-block" style="font-size:12px;margin-bottom:8px;border-color:var(--warning);color:var(--warning);" id="save-key-btn">키 저장</button>
-      ` : ''}
       <div style="font-size:12px; color:#a78bfa; font-weight:600; margin-bottom:8px;">무엇이 궁금한가요?</div>
-      <textarea id="ask-ai-input" placeholder="예: 왜 把를 여기서 쓰나요? / 이 문장은 무슨 문형인가요?" style="width:100%;padding:10px;font-size:14px;background:var(--bg);border:1px solid #333;border-radius:8px;color:var(--text);outline:none;resize:none;min-height:50px;" ${!hasKey ? 'disabled' : ''}></textarea>
-      <button class="btn btn-block" style="margin-top:8px;background:#10a37f;color:white;font-weight:600;" id="ask-gpt-btn" ${!hasKey ? 'disabled' : ''}>질문하기</button>
-      <div id="ai-answer" style="display:none; margin-top:10px; padding:12px; background:var(--bg); border-radius:10px; font-size:14px; line-height:1.7; color:var(--text); white-space:pre-wrap;"></div>
-      ${hasKey ? `<div style="font-size:10px; color:var(--text2); margin-top:6px; text-align:center; cursor:pointer;" id="reset-key-link">API 키 변경</div>` : ''}
+      <textarea id="ask-ai-input" placeholder="예: 왜 把를 여기서 쓰나요? / 이 문장은 무슨 문형인가요?" style="width:100%;padding:10px;font-size:14px;background:var(--bg);border:1px solid #333;border-radius:8px;color:var(--text);outline:none;resize:none;min-height:50px;"></textarea>
+      <button class="btn btn-block" style="margin-top:8px;background:#a78bfa;color:white;font-weight:600;" id="copy-ask-btn">질문 복사하기</button>
     </div>`;
-
-  if (!hasKey) {
-    document.getElementById('save-key-btn')?.addEventListener('click', () => {
-      const key = document.getElementById('api-key-input')?.value?.trim();
-      if (key && key.startsWith('sk-')) {
-        setApiKey(key);
-        toast('API 키 저장 완료!');
-        showAskAIPanel(containerId, sentence, korean);
-      } else {
-        toast('올바른 API 키를 입력하세요 (sk-...)');
-      }
-    });
-  }
-
-  document.getElementById('ask-gpt-btn')?.addEventListener('click', () => askAI(containerId));
-  document.getElementById('reset-key-link')?.addEventListener('click', () => {
-    localStorage.removeItem('hsk4_openai_key');
-    showAskAIPanel(containerId, sentence, korean);
-  });
-
-  // Enter key to submit
-  document.getElementById('ask-ai-input')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askAI(containerId); }
-  });
-
+  document.getElementById('copy-ask-btn').addEventListener('click', () => copyAndToast());
   setTimeout(() => document.getElementById('ask-ai-input')?.focus(), 100);
 }
 
-async function askAI(containerId) {
-  const key = getApiKey();
-  if (!key) { toast('API 키를 먼저 입력하세요'); return; }
-
+function copyAndToast() {
   const sentence = _askSentence;
   const korean = _askKorean;
   const question = document.getElementById('ask-ai-input')?.value?.trim() || '이 문장의 문법 구조를 자세히 설명해주세요';
+  const prompt = `중국어 문장을 공부하고 있습니다.
 
-  const btn = document.getElementById('ask-gpt-btn');
-  const answerDiv = document.getElementById('ai-answer');
-  if (btn) { btn.disabled = true; btn.textContent = '답변 생성 중...'; }
-  if (answerDiv) { answerDiv.style.display = 'block'; answerDiv.textContent = '생각 중...'; }
-
-  const systemPrompt = `당신은 HSK 중국어 문법 전문 튜터입니다. 한국어로 답변하세요.
-답변 시 반드시 포함할 것:
-1. 문장의 각 단어 역할 (주어/서술어/목적어/보어/부사어 등)
-2. 해당 문형 분류 (把자문, 被자문, 연동문, 겸어문, 비교문, 존현문, 보어구문 등)
-3. 왜 이 어순이 맞는지 설명
-4. 비슷한 예문 1개
-간결하고 명확하게, HSK 4급 학습자 수준에 맞춰 설명하세요.`;
-
-  const userPrompt = `문장: ${sentence}
+문장: ${sentence}
 해석: ${korean}
 병음: ${toPinyin(sentence)}
 
-질문: ${question}`;
+질문: ${question}
 
-  try {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        max_tokens: 800,
-        temperature: 0.3
-      })
-    });
+HSK 4급 수준으로 쉽게 설명해주세요. 문장 성분(주어/서술어/목적어/보어 등)과 문형(把자문, 겸어문, 연동문 등)도 알려주세요.`;
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error?.message || 'API 오류 (' + res.status + ')');
-    }
-
-    const data = await res.json();
-    const answer = data.choices?.[0]?.message?.content || '답변을 받지 못했습니다';
-    if (answerDiv) answerDiv.textContent = answer;
-  } catch(e) {
-    if (answerDiv) answerDiv.textContent = '오류: ' + e.message;
-    if (e.message.includes('401') || e.message.includes('Incorrect API')) {
-      toast('API 키가 올바르지 않습니다');
-      localStorage.removeItem('hsk4_openai_key');
-    }
-  }
-
-  if (btn) { btn.disabled = false; btn.textContent = '다시 질문하기'; }
+  navigator.clipboard.writeText(prompt).then(() => {
+    toast('복사 완료! ChatGPT 또는 Claude 앱에서 붙여넣기하세요');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = prompt;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('복사 완료! ChatGPT 또는 Claude 앱에서 붙여넣기하세요');
+  });
 }
 
 // =================== WRONG ITEMS TRACKER ===================
