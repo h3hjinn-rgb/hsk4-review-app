@@ -2721,14 +2721,10 @@ function showVocabResult() {
           `).join('')}
         </div>
       ` : ''}
-      <div class="btn-group">
-        <button class="btn btn-outline" id="vs-result-back">돌아가기</button>
-        <button class="btn btn-primary" id="vs-result-retry">다시 학습</button>
-      </div>
+      <button class="btn btn-primary btn-block" id="vs-result-back">돌아가기</button>
     </div>`;
 
   content.querySelector('#vs-result-back').addEventListener('click', () => { showPage('vocab'); updateVocabPage(); });
-  content.querySelector('#vs-result-retry').addEventListener('click', () => startVocabSession());
   document.getElementById('vs-counter').textContent = '완료!';
   document.getElementById('vs-progress').style.width = '100%';
 
