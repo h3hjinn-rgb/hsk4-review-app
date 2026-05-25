@@ -1479,24 +1479,40 @@ function setTypingMode(mode) {
 let orderState = { answer: [], selected: [], remaining: [] };
 
 function segmentSentence(sentence) {
-  // Segment Chinese sentence into meaningful chunks
-  // Remove trailing punctuation for segmentation, add back later
-  const punct = sentence.match(/[。？！，、；：""''（）]+$/);
+  // Extract trailing punctuation
+  const punct = sentence.match(/[。？！，、；：""''（）「」]+$/);
   const clean = punct ? sentence.slice(0, -punct[0].length) : sentence;
 
-  // Split by common patterns: particles, measure words, etc.
-  // Use a simple greedy approach: 2-3 char segments
+  // Build word set from hskWords for dictionary-based segmentation
+  const wordSet = new Set();
+  if (hskWords && hskWords.length > 0) {
+    for (const w of hskWords) {
+      wordSet.add(w.chinese);
+    }
+  }
+
+  // Greedy longest-match segmentation
   const segments = [];
   let i = 0;
   while (i < clean.length) {
-    // Try 4, 3, 2, then 1 character chunks
-    let chunkSize = Math.min(4, clean.length - i);
-    if (clean.length - i <= 2) chunkSize = clean.length - i;
-    else chunkSize = 2 + Math.floor(Math.random() * 2); // 2-3 chars randomly
-    chunkSize = Math.min(chunkSize, clean.length - i);
-    segments.push(clean.slice(i, i + chunkSize));
-    i += chunkSize;
+    let matched = false;
+    // Try longest first (4 chars down to 2)
+    for (let len = Math.min(4, clean.length - i); len >= 2; len--) {
+      const candidate = clean.slice(i, i + len);
+      if (wordSet.has(candidate)) {
+        segments.push(candidate);
+        i += len;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      // Single character (common for 的, 了, 在, 是, etc.)
+      segments.push(clean[i]);
+      i++;
+    }
   }
+
   if (punct) segments.push(punct[0]);
   return segments;
 }
