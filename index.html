@@ -1162,14 +1162,16 @@ function renderFlashcard() {
   container.innerHTML = `
     <div class="flashcard" id="fc-card">
       <div><span class="srs-dot ${srsClass}"></span><span style="font-size:11px;color:var(--text2);">Lv.${srs.level}</span></div>
+      ${w.pos === '이합동사' ? '<div style="margin-bottom:4px;"><span style="font-size:10px;padding:2px 8px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사</span></div>' : ''}
       <div class="chinese">${w.chinese}</div>
       ${(showPinyin || fcState.revealed) ? `<div class="pinyin">${w.pinyin}</div>` : ''}
       <div class="${fcState.revealed ? 'revealed' : 'hidden'}">
         <div class="pos">${w.pos}</div>
         <div class="meaning">${w.meaning}</div>
-        <div class="example">${w.example}</div>
+        <div class="example">${fcState.revealed && w.pos === '이합동사' ? highlightIhap(w.example, w.chinese) : w.example}</div>
         <div style="font-size:12px; color:var(--warning); margin-top:2px;">${toPinyin(w.example)}</div>
         <div class="example-ko">${w.exampleKo}</div>
+        ${fcState.revealed && w.pos === '이합동사' ? buildIhapNote(w.chinese) : ''}
       </div>
       ${!fcState.revealed ? '<div style="font-size:13px; color:var(--text2); margin-top:16px;">탭하여 뜻 보기</div>' : ''}
     </div>
@@ -1324,11 +1326,13 @@ function showWordQuizFeedback(correct, answer) {
     <div style="color:${correct ? 'var(--success)' : 'var(--danger)'}; font-weight:600; margin-bottom:8px;">
       ${correct ? '정답!' : '오답!'}
     </div>
+    ${w.pos === '이합동사' ? '<div style="margin-bottom:4px;"><span style="font-size:10px;padding:2px 8px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사</span></div>' : ''}
     <div style="font-size:16px;">${w.chinese} <span style="color:var(--warning);">(${w.pinyin})</span></div>
     <div style="font-size:14px; color:var(--text2);">${w.meaning}</div>
-    <div style="font-size:14px; margin-top:8px;">${w.example}</div>
+    <div style="font-size:14px; margin-top:8px;">${w.pos === '이합동사' ? highlightIhap(w.example, w.chinese) : w.example}</div>
     <div style="font-size:12px; color:var(--warning); margin-top:2px;">${toPinyin(w.example)}</div>
     <div style="font-size:12px; color:var(--text2);">${w.exampleKo}</div>
+    ${w.pos === '이합동사' ? buildIhapNote(w.chinese) : ''}
     <button class="btn btn-outline btn-block" style="margin-top:12px;" id="wq-next-btn">다음</button>`;
   document.getElementById('wq-next-btn').addEventListener('click', () => { wqState.current++; renderWordQuiz(); });
 }
@@ -1923,6 +1927,27 @@ function getGrammarRole(word, seg, allSegments) {
   }
 
   return pos || '';
+}
+
+// 이합동사 helper: highlight characters in sentence
+function highlightIhap(sentence, chinese) {
+  const chars = chinese.replace(/[（）()\s]/g, '');
+  let result = sentence;
+  for (const ch of chars) {
+    result = result.replace(ch, `<span style="color:#f472b6;font-weight:700;text-decoration:underline;">${ch}</span>`);
+  }
+  return result;
+}
+
+function buildIhapNote(chinese) {
+  const chars = chinese.replace(/[（）()\s]/g, '');
+  if (chars.length < 2) return '';
+  const c1 = chars[0], c2 = chars.slice(1);
+  return `<div style="margin-top:6px;padding:6px 8px;background:#f472b615;border-radius:6px;border:1px solid #f472b633;font-size:11px;">
+    <span style="color:#f472b6;font-weight:700;">이합동사</span>
+    <span style="color:var(--text2);"> ${c1}<span style="color:var(--warning);">+了/过/着+</span>${c2}</span>
+    <span style="color:var(--text2);"> 예: ${c1}<span style="color:var(--warning);">了</span>${c2} / ${c1}<span style="color:var(--warning);">过</span>${c2}</span>
+  </div>`;
 }
 
 // Show hint only for words user hasn't learned yet (SRS level 0, never seen)
@@ -2615,29 +2640,12 @@ function answerVocab(el, isCorrect, wordId) {
     blank.classList.add(isCorrect ? 'filled' : 'wrong-fill');
   }
 
-  // 이합동사: highlight split characters in the full sentence + show explanation
+  // 이합동사: highlight + explanation
   if (w.pos === '이합동사' && w.chinese.length >= 2) {
-    const chars = w.chinese.replace(/[（）()\s]/g, ''); // e.g. 睡觉, 唱歌
     const sentEl = document.querySelector('.sq-sentence');
-    if (sentEl) {
-      // Highlight each character of the 이합동사 in the sentence
-      let sentHtml = sentEl.innerHTML;
-      for (const ch of chars) {
-        sentHtml = sentHtml.replace(new RegExp(`(?<!<[^>]*)${ch}`, ''), `<span style="color:#f472b6;font-weight:700;text-decoration:underline;">${ch}</span>`);
-      }
-      sentEl.innerHTML = sentHtml;
-    }
-    // Add 이합동사 explanation below sentence
+    if (sentEl) sentEl.innerHTML = highlightIhap(sentEl.textContent, w.chinese);
     const koEl = document.querySelector('.sq-ko');
-    if (koEl) {
-      const c1 = chars[0], c2 = chars.slice(1);
-      koEl.innerHTML += `<div style="margin-top:8px;padding:8px;background:#f472b615;border-radius:8px;border:1px solid #f472b633;">
-        <span style="color:#f472b6;font-weight:700;">이합동사</span>
-        <span style="font-size:12px;color:var(--text2);"> ${c1}<span style="color:var(--warning);">+了/过/着/…+</span>${c2}</span>
-        <div style="font-size:11px;color:var(--text2);margin-top:3px;">사이에 了·过·着·수량사 등이 들어갈 수 있어요</div>
-        <div style="font-size:12px;color:var(--text);margin-top:3px;">예: ${c1}<span style="color:var(--warning);">了一个</span>${c2} / ${c1}<span style="color:var(--warning);">过</span>${c2}</div>
-      </div>`;
-    }
+    if (koEl) koEl.innerHTML += buildIhapNote(w.chinese);
   }
 
   // Highlight options and reveal all meanings
@@ -2664,15 +2672,9 @@ function answerVocab(el, isCorrect, wordId) {
     <div style="text-align:center; margin-bottom:8px;">
       <span style="font-size:13px; color:${speedColor};">${(elapsed/1000).toFixed(1)}초 ${speedText}</span>
     </div>
-    <div id="ask-ai-area2" style="margin-bottom:8px;">
-      <button class="btn btn-outline btn-block" style="font-size:12px;padding:8px;border-color:#a78bfa;color:#a78bfa;" id="ask-ai-btn2">이 문장 AI에게 질문하기</button>
-    </div>
     <button class="btn btn-primary btn-block" id="vs-next-btn2">다음</button>
   `;
   document.getElementById('vs-next-btn2').addEventListener('click', nextVocabQuestion);
-  document.getElementById('ask-ai-btn2').addEventListener('click', () => {
-    showAskAIPanel('ask-ai-area2', sent.zh, sent.ko);
-  });
 }
 
 function nextVocabQuestion() {
