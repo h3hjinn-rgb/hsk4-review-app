@@ -1535,28 +1535,49 @@ function renderOrderQuestion() {
   document.getElementById('order-feedback').style.display = 'none';
 }
 
-let dragState = { active: false, idx: -1, el: null };
+let swapState = { selectedIdx: -1 }; // tap-to-swap
 
 function updateOrderDisplay() {
   const selContainer = document.getElementById('order-selected');
   if (orderState.selected.length === 0) {
     selContainer.innerHTML = '<span style="color:#555;">아래 단어를 탭하여 배열하세요</span>';
+    swapState.selectedIdx = -1;
   } else {
     selContainer.innerHTML = orderState.selected.map((s, i) => {
-      return `<span class="order-chip" data-idx="${i}" style="display:inline-flex;flex-direction:column;align-items:center;padding:6px 12px;margin:3px;background:var(--accent2);border-radius:8px;cursor:grab;user-select:none;touch-action:none;transition:transform .15s,opacity .15s;">
+      const isSelected = swapState.selectedIdx === i;
+      return `<span class="order-chip" data-idx="${i}" style="display:inline-flex;flex-direction:column;align-items:center;padding:6px 12px;margin:3px;background:${isSelected ? 'var(--accent)' : 'var(--accent2)'};border-radius:8px;cursor:pointer;user-select:none;transition:all .15s;${isSelected ? 'transform:scale(1.1);box-shadow:0 0 12px rgba(233,69,96,0.5);' : ''}">
         <span style="font-size:18px;pointer-events:none;">${s}</span>
       </span>`;
-    }).join('');
+    }).join('') + `<div style="font-size:10px;color:var(--text2);margin-top:4px;">${swapState.selectedIdx >= 0 ? '이동할 위치를 탭하세요 (길게 누르면 제거)' : '탭: 위치 이동 / 길게 누르기: 제거'}</div>`;
 
-    // Attach drag handlers to each chip
+    // Attach handlers
     selContainer.querySelectorAll('.order-chip').forEach(chip => {
-      // Tap to remove
-      chip.addEventListener('click', (e) => {
-        if (dragState.active) return;
-        unselectOrder(parseInt(chip.dataset.idx));
+      let holdTimer = null;
+      let held = false;
+
+      chip.addEventListener('touchstart', (e) => {
+        held = false;
+        holdTimer = setTimeout(() => {
+          held = true;
+          // Long press = remove
+          unselectOrder(parseInt(chip.dataset.idx));
+          swapState.selectedIdx = -1;
+          if (navigator.vibrate) navigator.vibrate(30);
+        }, 500);
+      }, { passive: true });
+
+      chip.addEventListener('touchend', (e) => {
+        clearTimeout(holdTimer);
+        if (held) return;
+        handleChipTap(parseInt(chip.dataset.idx));
       });
-      // Drag to reorder (touch)
-      chip.addEventListener('touchstart', handleDragStart, { passive: false });
+
+      chip.addEventListener('touchmove', () => { clearTimeout(holdTimer); }, { passive: true });
+
+      // Mouse fallback
+      chip.addEventListener('click', (e) => {
+        handleChipTap(parseInt(chip.dataset.idx));
+      });
     });
   }
 
@@ -1571,67 +1592,24 @@ function updateOrderDisplay() {
     }).join('');
 }
 
-// --- Drag to reorder ---
-function handleDragStart(e) {
-  const chip = e.currentTarget;
-  const idx = parseInt(chip.dataset.idx);
-  const touch = e.touches[0];
-
-  // Long-press detection: start drag after 200ms hold
-  let moved = false;
-  const startX = touch.clientX, startY = touch.clientY;
-  const rect = chip.getBoundingClientRect();
-
-  const holdTimer = setTimeout(() => {
-    dragState = { active: true, idx, el: chip, startX, startY, offsetX: startX - rect.left, offsetY: startY - rect.top };
-    chip.style.opacity = '0.7';
-    chip.style.transform = 'scale(1.1)';
-    chip.style.zIndex = '50';
-    chip.style.position = 'relative';
-    // Vibrate if available
-    if (navigator.vibrate) navigator.vibrate(30);
-  }, 200);
-
-  const onMove = (ev) => {
-    const t = ev.touches[0];
-    if (Math.abs(t.clientX - startX) > 5 || Math.abs(t.clientY - startY) > 5) moved = true;
-    if (!dragState.active) return;
-    ev.preventDefault();
-
-    // Find which chip we're over
-    const container = document.getElementById('order-selected');
-    const chips = container.querySelectorAll('.order-chip');
-    let targetIdx = dragState.idx;
-    chips.forEach((c, ci) => {
-      if (ci === dragState.idx) return;
-      const r = c.getBoundingClientRect();
-      if (t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom) {
-        targetIdx = ci;
-      }
-    });
-
-    if (targetIdx !== dragState.idx) {
-      // Swap
-      const arr = orderState.selected;
-      const item = arr.splice(dragState.idx, 1)[0];
-      arr.splice(targetIdx, 0, item);
-      dragState.idx = targetIdx;
-      updateOrderDisplay();
-    }
-  };
-
-  const onEnd = () => {
-    clearTimeout(holdTimer);
-    document.removeEventListener('touchmove', onMove);
-    document.removeEventListener('touchend', onEnd);
-    if (dragState.active) {
-      dragState.active = false;
-      updateOrderDisplay();
-    }
-  };
-
-  document.addEventListener('touchmove', onMove, { passive: false });
-  document.addEventListener('touchend', onEnd);
+// --- Tap to swap positions ---
+function handleChipTap(idx) {
+  if (swapState.selectedIdx === -1) {
+    // First tap: select this chip
+    swapState.selectedIdx = idx;
+    updateOrderDisplay();
+  } else if (swapState.selectedIdx === idx) {
+    // Tap same chip: deselect
+    swapState.selectedIdx = -1;
+    updateOrderDisplay();
+  } else {
+    // Second tap: move selected chip to this position
+    const arr = orderState.selected;
+    const item = arr.splice(swapState.selectedIdx, 1)[0];
+    arr.splice(idx, 0, item);
+    swapState.selectedIdx = -1;
+    updateOrderDisplay();
+  }
 }
 
 // Build sentence structure analysis for word order quiz
@@ -1679,9 +1657,89 @@ function buildSentenceAnalysis(segments, fullSentence) {
   const uniqueRoles = [];
   for (const r of roles) { if (!uniqueRoles.includes(r)) uniqueRoles.push(r); }
   html += `<div style="font-size:11px; color:var(--text2);">문장 성분: ${uniqueRoles.map(r => `<span style="color:${roleColors[r] || '#aaa'};">${r}</span>`).join(' → ')}</div>`;
-  html += `<div style="font-size:11px; color:var(--text2); margin-top:3px;">TIP: 중국어 어순 = 주어 + 부사어/전치사구 + 서술어(동사) + 보어 + 목적어</div>`;
+
+  // Sentence pattern classification
+  const pattern = classifySentencePattern(segments, analysis);
+  if (pattern) {
+    html += `<div style="margin-top:8px; padding:8px; background:var(--card); border-radius:8px; border-left:3px solid var(--accent);">
+      <div style="font-size:12px; font-weight:700; color:var(--accent); margin-bottom:3px;">${pattern.name}</div>
+      <div style="font-size:11px; color:var(--text2);">${pattern.desc}</div>
+      <div style="font-size:11px; color:var(--warning); margin-top:2px;">${pattern.structure}</div>
+    </div>`;
+  }
 
   return html;
+}
+
+// Classify sentence pattern (HSK grammar types)
+function classifySentencePattern(segments, analysis) {
+  const text = segments.join('');
+  const segs = segments;
+  const hasWord = (w) => segs.includes(w);
+  const roles = analysis.map(a => a.role);
+
+  // 把字句
+  if (hasWord('把')) {
+    return { name: '把자문 (把字句)', desc: '목적어를 동사 앞으로 이동시켜 처치·처리를 강조', structure: '주어 + 把 + 목적어 + 동사 + 보어/결과' };
+  }
+  // 被字句
+  if (hasWord('被')) {
+    return { name: '피동문 (被字句)', desc: '주어가 동작을 당하는 피동 표현', structure: '주어(받는 자) + 被 + (행위자) + 동사' };
+  }
+  // 比字句
+  if (hasWord('比')) {
+    return { name: '비교문 (比字句)', desc: '두 대상을 비교하는 표현', structure: 'A + 比 + B + 형용사/동사' };
+  }
+  // 是...的 구문
+  if (hasWord('是') && hasWord('的')) {
+    return { name: '是...的 강조구문', desc: '이미 발생한 사실의 시간·장소·방식 등을 강조', structure: '주어 + 是 + (강조 내용) + 동사 + 的' };
+  }
+  // 연동문 (连动句) - two verbs in sequence
+  const verbIndices = [];
+  analysis.forEach((a, i) => { if (a.role === '서술어') verbIndices.push(i); });
+  if (verbIndices.length >= 2) {
+    // Check if second verb has no subject between them
+    const between = analysis.slice(verbIndices[0] + 1, verbIndices[1]);
+    const hasSubjBetween = between.some(a => a.role === '주어');
+    if (!hasSubjBetween && !hasWord('让') && !hasWord('请') && !hasWord('叫') && !hasWord('使')) {
+      return { name: '연동문 (连动句)', desc: '하나의 주어가 두 개의 동작을 순서대로 수행', structure: '주어 + 동사① + (목적어) + 동사② + (목적어)' };
+    }
+  }
+  // 겸어문 (兼语句) - 让/请/叫/使 + person + verb
+  if (hasWord('让') || hasWord('请') || hasWord('叫') || hasWord('使')) {
+    return { name: '겸어문 (兼语句)', desc: '첫 번째 동사의 목적어가 두 번째 동사의 주어 역할', structure: '주어 + 让/请/叫 + 사람 + 동사' };
+  }
+  // 존현문
+  if (hasWord('有') && roles[0] !== '주어') {
+    return { name: '존현문 (存现句)', desc: '어떤 장소에 사물이 존재·출현·소실함을 표현', structure: '장소 + 有/동사 + 사물' };
+  }
+  // 정도보어 (得 구문)
+  if (hasWord('得') && analysis.some(a => a.role === '정도보어 조사')) {
+    return { name: '정도보어 구문', desc: '동작의 정도나 결과를 보충 설명', structure: '동사 + 得 + (정도/상태)' };
+  }
+  // 결과보어
+  if (roles.includes('결과보어')) {
+    return { name: '결과보어 구문', desc: '동사 뒤에 동작의 결과를 보충 (看见, 听懂, 做完 등)', structure: '동사 + 결과보어' };
+  }
+  // 시량보어/동량보어 - number + 양사 after verb
+  const qIdx = roles.indexOf('양사구');
+  if (qIdx > 0 && analysis.slice(0, qIdx).some(a => a.role === '서술어')) {
+    const qWord = analysis[qIdx];
+    if (['次','遍','回','趟','下'].some(w => qWord.seg.includes(w) || segs.some(s => s === w))) {
+      return { name: '동량보어 구문', desc: '동작의 횟수를 나타냄', structure: '동사 + 숫자 + 동량사(次/遍/回)' };
+    }
+    return { name: '시량보어 구문', desc: '동작의 지속 시간을 나타냄', structure: '동사 + 시간 길이' };
+  }
+  // 전치사구 (在/从/对/向/给 등)
+  if (roles.includes('전치사구')) {
+    return { name: '전치사구 구문', desc: '전치사가 장소·대상·방향 등을 나타냄 (동사 앞에 위치)', structure: '주어 + 전치사구 + 동사 + 목적어' };
+  }
+  // 조동사 구문
+  if (roles.includes('조동사')) {
+    return { name: '조동사 구문', desc: '능력·의무·가능성 등을 나타냄 (会/能/可以/想/要/应该)', structure: '주어 + 조동사 + 동사 + 목적어' };
+  }
+
+  return null;
 }
 
 // Determine detailed grammar role of a word in context
