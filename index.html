@@ -2561,10 +2561,12 @@ function renderVocabQuestion() {
   content.innerHTML = `
     <div class="sq-ko">${esc(sent.ko)}</div>
     <div class="sq-sentence">${esc(sent.blank).replace('___', '<span class="sq-blank" id="sq-blank">\u3000\u3000</span>')}</div>
+    ${w.pos === '이합동사' ? `<div style="text-align:center;margin-bottom:8px;"><span style="font-size:11px;padding:3px 10px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사 離合動詞</span></div>` : ''}
     <div class="mc-grid" id="mc-grid">
       ${options.map(o => `
         <button class="mc-option" data-id="${o.id}" data-correct="${o.id === w.id}" data-word-id="${w.id}">
           ${esc(o.chinese)}
+          ${o.pos === '이합동사' ? '<div style="font-size:9px;color:#f472b6;font-weight:700;">이합</div>' : ''}
           <div class="mc-pinyin">${esc(o.pinyin)}</div>
           <div class="mc-meaning">${esc(o.meaning)}</div>
         </button>
