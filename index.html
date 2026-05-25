@@ -1162,16 +1162,16 @@ function renderFlashcard() {
   container.innerHTML = `
     <div class="flashcard" id="fc-card">
       <div><span class="srs-dot ${srsClass}"></span><span style="font-size:11px;color:var(--text2);">Lv.${srs.level}</span></div>
-      ${w.pos === '이합동사' ? '<div style="margin-bottom:4px;"><span style="font-size:10px;padding:2px 8px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사</span></div>' : ''}
+      ${isIhap(w) ? '<div style="margin-bottom:4px;"><span style="font-size:10px;padding:2px 8px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사</span></div>' : ''}
       <div class="chinese">${w.chinese}</div>
       ${(showPinyin || fcState.revealed) ? `<div class="pinyin">${w.pinyin}</div>` : ''}
       <div class="${fcState.revealed ? 'revealed' : 'hidden'}">
         <div class="pos">${w.pos}</div>
         <div class="meaning">${w.meaning}</div>
-        <div class="example">${fcState.revealed && w.pos === '이합동사' ? highlightIhap(w.example, w.chinese) : w.example}</div>
+        <div class="example">${fcState.revealed && isIhap(w) ? highlightIhap(w.example, w.chinese) : w.example}</div>
         <div style="font-size:12px; color:var(--warning); margin-top:2px;">${toPinyin(w.example)}</div>
         <div class="example-ko">${w.exampleKo}</div>
-        ${fcState.revealed && w.pos === '이합동사' ? buildIhapNote(w.chinese) : ''}
+        ${fcState.revealed && isIhap(w) ? buildIhapNote(w.chinese) : ''}
       </div>
       ${!fcState.revealed ? '<div style="font-size:13px; color:var(--text2); margin-top:16px;">탭하여 뜻 보기</div>' : ''}
     </div>
@@ -1326,13 +1326,13 @@ function showWordQuizFeedback(correct, answer) {
     <div style="color:${correct ? 'var(--success)' : 'var(--danger)'}; font-weight:600; margin-bottom:8px;">
       ${correct ? '정답!' : '오답!'}
     </div>
-    ${w.pos === '이합동사' ? '<div style="margin-bottom:4px;"><span style="font-size:10px;padding:2px 8px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사</span></div>' : ''}
+    ${isIhap(w) ? '<div style="margin-bottom:4px;"><span style="font-size:10px;padding:2px 8px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사</span></div>' : ''}
     <div style="font-size:16px;">${w.chinese} <span style="color:var(--warning);">(${w.pinyin})</span></div>
     <div style="font-size:14px; color:var(--text2);">${w.meaning}</div>
-    <div style="font-size:14px; margin-top:8px;">${w.pos === '이합동사' ? highlightIhap(w.example, w.chinese) : w.example}</div>
+    <div style="font-size:14px; margin-top:8px;">${isIhap(w) ? highlightIhap(w.example, w.chinese) : w.example}</div>
     <div style="font-size:12px; color:var(--warning); margin-top:2px;">${toPinyin(w.example)}</div>
     <div style="font-size:12px; color:var(--text2);">${w.exampleKo}</div>
-    ${w.pos === '이합동사' ? buildIhapNote(w.chinese) : ''}
+    ${isIhap(w) ? buildIhapNote(w.chinese) : ''}
     <button class="btn btn-outline btn-block" style="margin-top:12px;" id="wq-next-btn">다음</button>`;
   document.getElementById('wq-next-btn').addEventListener('click', () => { wqState.current++; renderWordQuiz(); });
 }
@@ -1927,6 +1927,17 @@ function getGrammarRole(word, seg, allSegments) {
   }
 
   return pos || '';
+}
+
+// 이합동사 판별: pos가 '이합동사' 또는 '이합'이거나, hskWords에서 매칭
+function isIhap(w) {
+  if (w.pos === '이합동사' || w.pos === '이합') return true;
+  // Check hskWords for matching word
+  if (hskWords && hskWords.length > 0) {
+    const hw = hskWords.find(x => x.chinese === w.chinese);
+    if (hw && hw.pos === '이합동사') return true;
+  }
+  return false;
 }
 
 // 이합동사 helper: highlight characters in sentence
@@ -2586,12 +2597,12 @@ function renderVocabQuestion() {
   content.innerHTML = `
     <div class="sq-ko">${esc(sent.ko)}</div>
     <div class="sq-sentence">${esc(sent.blank).replace('___', '<span class="sq-blank" id="sq-blank">\u3000\u3000</span>')}</div>
-    ${w.pos === '이합동사' ? `<div style="text-align:center;margin-bottom:8px;"><span style="font-size:11px;padding:3px 10px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사 離合動詞</span></div>` : ''}
+    ${isIhap(w) ? `<div style="text-align:center;margin-bottom:8px;"><span style="font-size:11px;padding:3px 10px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사 離合動詞</span></div>` : ''}
     <div class="mc-grid" id="mc-grid">
       ${options.map(o => `
         <button class="mc-option" data-id="${o.id}" data-correct="${o.id === w.id}" data-word-id="${w.id}">
           ${esc(o.chinese)}
-          ${o.pos === '이합동사' ? '<div style="font-size:9px;color:#f472b6;font-weight:700;">이합</div>' : ''}
+          ${isIhap(o) ? '<div style="font-size:9px;color:#f472b6;font-weight:700;">이합</div>' : ''}
           <div class="mc-pinyin">${esc(o.pinyin)}</div>
           <div class="mc-meaning">${esc(o.meaning)}</div>
         </button>
@@ -2641,7 +2652,7 @@ function answerVocab(el, isCorrect, wordId) {
   }
 
   // 이합동사: highlight + explanation
-  if (w.pos === '이합동사' && w.chinese.length >= 2) {
+  if (isIhap(w) && w.chinese.length >= 2) {
     const sentEl = document.querySelector('.sq-sentence');
     if (sentEl) sentEl.innerHTML = highlightIhap(sentEl.textContent, w.chinese);
     const koEl = document.querySelector('.sq-ko');
