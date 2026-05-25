@@ -294,6 +294,66 @@ body {
 }
 .typing-input:focus { border-color: var(--accent); }
 
+/* Vocab page */
+.vocab-stat-row {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.vocab-stat-item {
+  flex: 1; background: var(--card); border-radius: 12px;
+  padding: 10px; text-align: center;
+}
+.vocab-stat-item .val { font-size: 20px; font-weight: 700; }
+.vocab-stat-item .lbl { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.vocab-stat-item .val.c-green { color: var(--success); }
+.vocab-stat-item .val.c-yellow { color: var(--warning); }
+.vocab-stat-item .val.c-red { color: var(--accent); }
+
+/* Sentence quiz */
+.sq-sentence {
+  font-size: 22px; line-height: 1.8; text-align: center;
+  padding: 20px 16px; margin-bottom: 16px;
+  background: var(--card); border-radius: var(--radius);
+  word-break: break-all;
+}
+.sq-sentence .sq-blank {
+  display: inline-block; min-width: 44px;
+  border-bottom: 3px solid var(--accent);
+  margin: 0 2px; color: transparent;
+}
+.sq-sentence .sq-blank.filled {
+  color: var(--success); border-color: var(--success);
+}
+.sq-sentence .sq-blank.wrong-fill {
+  color: var(--danger); border-color: var(--danger);
+}
+.sq-ko {
+  font-size: 14px; color: var(--text2); text-align: center;
+  margin-bottom: 20px; line-height: 1.5;
+}
+.sq-timer {
+  font-size: 12px; color: var(--text2); text-align: center; margin-bottom: 8px;
+}
+
+/* Multiple choice grid */
+.mc-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-bottom: 16px;
+}
+.mc-option {
+  padding: 16px 12px; background: var(--card);
+  border: 2px solid #333; border-radius: 14px;
+  font-size: 20px; font-weight: 600; color: var(--text);
+  text-align: center; cursor: pointer; transition: all .15s;
+}
+.mc-option:active { transform: scale(0.96); }
+.mc-option.correct { border-color: var(--success); background: #22c55e22; }
+.mc-option.wrong { border-color: var(--danger); background: #ef444422; }
+.mc-option.dim { opacity: 0.3; pointer-events: none; }
+.mc-option .mc-pinyin { font-size: 11px; color: var(--warning); font-weight: 400; margin-top: 4px; }
+.mc-option .mc-meaning { font-size: 12px; color: var(--text2); font-weight: 400; margin-top: 4px; display: none; }
+.mc-option.reveal .mc-meaning { display: block; }
+.mc-option.reveal .mc-pinyin { display: block; }
+
 /* Toast */
 .toast {
   position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
@@ -369,6 +429,10 @@ body {
       <div class="card-sub" style="color: #ddd;" id="daily-review-desc">복습을 시작하세요</div>
     </div>
 
+    <div class="card" onclick="showPage('vocab')" style="background: linear-gradient(135deg, #0f3460, #533483);">
+      <div class="card-title" style="font-size: 18px;">단어 학습</div>
+      <div class="card-sub" style="color: #ddd;">HSK 1~4급 1,200단어 플래시카드 & 퀴즈</div>
+    </div>
     <div class="card" onclick="showPage('test')">
       <div class="card-title">문장 테스트</div>
       <div class="card-sub">38세트 - 빈칸에 중국어 채우기</div>
@@ -531,6 +595,48 @@ body {
     <div class="page-header">오늘의 복습</div>
     <div id="daily-content"></div>
   </div>
+
+  <!-- Vocab Page -->
+  <div id="page-vocab" class="page">
+    <div class="page-header">
+      단어 학습
+      <small>HSK 1~4급 1,200단어 - 예문 빈칸 채우기</small>
+    </div>
+    <div class="vocab-stat-row">
+      <div class="vocab-stat-item"><div class="val c-green" id="v-mastered2">0</div><div class="lbl">암기 완료</div></div>
+      <div class="vocab-stat-item"><div class="val c-yellow" id="v-learning">0</div><div class="lbl">학습 중</div></div>
+      <div class="vocab-stat-item"><div class="val c-red" id="v-due">0</div><div class="lbl">복습 필요</div></div>
+    </div>
+    <div class="chips" id="vocab-level-chips">
+      <div class="chip active" data-level="all" onclick="filterVocab('all')">전체</div>
+      <div class="chip" data-level="1" onclick="filterVocab('1')">1급</div>
+      <div class="chip" data-level="2" onclick="filterVocab('2')">2급</div>
+      <div class="chip" data-level="3" onclick="filterVocab('3')">3급</div>
+      <div class="chip" data-level="4" onclick="filterVocab('4')">4급</div>
+    </div>
+    <div id="vocab-start-card" class="card" style="background: linear-gradient(135deg, #0f3460, #533483); margin-bottom: 12px; text-align:center;" onclick="startVocabSession()">
+      <div class="card-title" style="font-size: 18px;">학습 시작</div>
+      <div class="card-sub" style="color: #ddd;" id="vocab-session-desc">복습 + 새 단어 20개</div>
+    </div>
+    <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">학습 진도</div>
+    <div id="vocab-progress-bar" style="height:8px; background:#333; border-radius:4px; overflow:hidden; margin-bottom:16px;">
+      <div id="vocab-progress-fill" style="height:100%; background: linear-gradient(90deg, var(--success), var(--warning)); width:0%; transition: width .5s;"></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text2); margin-bottom:16px;">
+      <span id="vocab-progress-text">0 / 1200</span>
+      <span id="vocab-avg-speed">평균 응답: -</span>
+    </div>
+  </div>
+
+  <!-- Vocab Session Page (말해보카 스타일) -->
+  <div id="page-vocabsession" class="page">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <button class="back-btn" onclick="confirmQuitVocab()" style="margin:0;">< 그만하기</button>
+      <span id="vs-counter" style="font-size:13px; color:var(--text2);">1/20</span>
+    </div>
+    <div class="progress-bar" style="margin-bottom:16px;"><div class="progress-fill" id="vs-progress"></div></div>
+    <div id="vs-content"></div>
+  </div>
 </div>
 
 <!-- Bottom Nav -->
@@ -551,9 +657,9 @@ body {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
     듣기
   </button>
-  <button class="nav-item" onclick="showPage('typing')" data-page="typing">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
-    타이핑
+  <button class="nav-item" onclick="showPage('vocab')" data-page="vocab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8M8 11h6"/></svg>
+    단어
   </button>
 </nav>
 
@@ -690,12 +796,19 @@ function updateHomeStats() {
 
 // =================== NAVIGATION ===================
 function showPage(pageId) {
+  // If leaving a quiz/session, the confirm is handled by the back button already
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + pageId).classList.add('active');
+  const el = document.getElementById('page-' + pageId);
+  if (!el) { document.getElementById('page-home').classList.add('active'); pageId = 'home'; }
+  else el.classList.add('active');
+  // Map sub-pages to parent nav items
+  const navMap = { vocabsession: 'vocab', quiz: 'test', flashcard: 'notes', wordquiz: 'notes', daily: 'home' };
+  const navPage = navMap[pageId] || pageId;
   document.querySelectorAll('.nav-item').forEach(n => {
-    n.classList.toggle('active', n.dataset.page === pageId);
+    n.classList.toggle('active', n.dataset.page === navPage);
   });
   if (pageId === 'home') updateHomeStats();
+  if (pageId === 'vocab') updateVocabStats();
 }
 
 function toast(msg) {
@@ -1419,8 +1532,314 @@ function startDailyReview(words) {
   renderWordQuiz();
 }
 
+// =================== VOCAB - 말해보카 Style ===================
+let hskWords = [];
+let vocabFilter = 'all';
+let vsState = null; // vocab session state
+
+async function loadHskWords() {
+  try {
+    const res = await fetch('data/hskWords.json');
+    hskWords = await res.json();
+    updateVocabStats();
+  } catch(e) { console.error('Failed to load HSK words:', e); }
+}
+
+function getVocabSRS(wordId) {
+  const key = 'hsk_' + wordId;
+  if (!srsData[key]) {
+    srsData[key] = { level: 0, nextReview: 0, correct: 0, wrong: 0, avgTime: 0 };
+  }
+  return srsData[key];
+}
+
+function updateVocabSRS(wordId, correct, responseTime) {
+  const key = 'hsk_' + wordId;
+  const s = getVocabSRS(wordId);
+  const intervals = [0, 0.5, 1, 3, 7, 14, 30, 60]; // days
+
+  if (correct) {
+    // Speed-based: fast=jump more, slow=jump less
+    if (responseTime < 3000) {
+      s.level = Math.min(s.level + 2, intervals.length - 1); // fast: +2
+    } else if (responseTime < 5000) {
+      s.level = Math.min(s.level + 1, intervals.length - 1); // normal: +1
+    }
+    // slow (>5s): level stays same (review again soon)
+    s.correct++;
+  } else {
+    s.level = 0; // wrong: reset to 0 (come back immediately)
+    s.wrong++;
+  }
+
+  // Update average response time
+  const total = s.correct + s.wrong;
+  s.avgTime = total <= 1 ? responseTime : Math.round(s.avgTime * 0.7 + responseTime * 0.3);
+  s.nextReview = Date.now() + intervals[s.level] * 86400000;
+  saveSRS();
+}
+
+function updateVocabStats() {
+  const filtered = vocabFilter === 'all' ? hskWords : hskWords.filter(w => w.level == vocabFilter);
+  let mastered = 0, learning = 0, due = 0;
+  for (const w of filtered) {
+    const s = getVocabSRS(w.id);
+    if (s.level >= 5) mastered++;
+    else if (s.level > 0) learning++;
+    if (s.level > 0 && s.nextReview <= Date.now()) due++;
+    else if (s.level === 0 && (s.correct > 0 || s.wrong > 0)) due++; // wrong ones
+  }
+  document.getElementById('v-mastered2').textContent = mastered;
+  document.getElementById('v-learning').textContent = learning;
+  document.getElementById('v-due').textContent = due;
+
+  // Progress bar
+  const total = filtered.length;
+  const learnedCount = mastered + learning;
+  document.getElementById('vocab-progress-fill').style.width = `${(learnedCount / total) * 100}%`;
+  document.getElementById('vocab-progress-text').textContent = `${learnedCount} / ${total}`;
+
+  // Average speed
+  let totalTime = 0, timeCount = 0;
+  for (const w of filtered) {
+    const s = getVocabSRS(w.id);
+    if (s.avgTime > 0) { totalTime += s.avgTime; timeCount++; }
+  }
+  const avgSec = timeCount > 0 ? (totalTime / timeCount / 1000).toFixed(1) : '-';
+  document.getElementById('vocab-avg-speed').textContent = `평균 응답: ${avgSec}초`;
+
+  // Session description
+  const dueWords = getDueVocabWords().length;
+  const newWords = getNewVocabWords().length;
+  const desc = document.getElementById('vocab-session-desc');
+  if (desc) {
+    if (dueWords > 0) desc.textContent = `복습 ${Math.min(dueWords, 10)}개 + 새 단어 ${Math.min(newWords, 10)}개`;
+    else desc.textContent = `새 단어 ${Math.min(newWords, 20)}개 학습`;
+  }
+}
+
+function filterVocab(level) {
+  vocabFilter = level;
+  document.querySelectorAll('#vocab-level-chips .chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.level === level);
+  });
+  updateVocabStats();
+}
+
+function getDueVocabWords() {
+  const filtered = vocabFilter === 'all' ? hskWords : hskWords.filter(w => w.level == vocabFilter);
+  return filtered.filter(w => {
+    const s = getVocabSRS(w.id);
+    if (s.level === 0 && (s.correct > 0 || s.wrong > 0)) return true; // previously wrong
+    return s.level > 0 && s.nextReview <= Date.now();
+  }).filter(w => w.sentence); // only words with sentences
+}
+
+function getNewVocabWords() {
+  const filtered = vocabFilter === 'all' ? hskWords : hskWords.filter(w => w.level == vocabFilter);
+  return filtered.filter(w => {
+    const s = getVocabSRS(w.id);
+    return s.level === 0 && s.correct === 0 && s.wrong === 0;
+  }).filter(w => w.sentence); // only words with sentences
+}
+
+// --- Session ---
+function startVocabSession() {
+  // Build queue: review words first, then new words
+  let queue = [];
+  const dueWords = getDueVocabWords().sort((a, b) => {
+    const sa = getVocabSRS(a.id), sb = getVocabSRS(b.id);
+    return sa.nextReview - sb.nextReview;
+  });
+  const newWords = getNewVocabWords();
+
+  // Take up to 10 review + 10 new = 20 total
+  queue.push(...dueWords.slice(0, 10));
+  const remaining = 20 - queue.length;
+  queue.push(...newWords.slice(0, remaining));
+
+  if (queue.length === 0) {
+    toast('학습할 단어가 없습니다');
+    return;
+  }
+
+  // Shuffle the queue (but keep review words slightly earlier)
+  const reviewPart = queue.filter(w => dueWords.includes(w)).sort(() => Math.random() - 0.5);
+  const newPart = queue.filter(w => !dueWords.includes(w)).sort(() => Math.random() - 0.5);
+  queue = [...reviewPart, ...newPart];
+
+  vsState = {
+    queue,
+    current: 0,
+    score: 0,
+    totalAnswered: 0,
+    wrongQueue: [], // words to retry at end
+    startTime: 0,
+    answered: false,
+    results: [] // {word, correct, time}
+  };
+
+  showPage('vocabsession');
+  renderVocabQuestion();
+}
+
+function confirmQuitVocab() {
+  if (confirm('학습을 종료할까요?')) {
+    showPage('vocab');
+    updateVocabStats();
+  }
+}
+
+function renderVocabQuestion() {
+  // Check if we're done with main queue AND wrong queue
+  if (vsState.current >= vsState.queue.length) {
+    if (vsState.wrongQueue.length > 0) {
+      // Retry wrong words
+      vsState.queue = [...vsState.wrongQueue];
+      vsState.wrongQueue = [];
+      vsState.current = 0;
+      toast('틀린 단어 다시 복습!');
+    } else {
+      showVocabResult();
+      return;
+    }
+  }
+
+  const w = vsState.queue[vsState.current];
+  const total = vsState.queue.length;
+  document.getElementById('vs-counter').textContent = `${vsState.current + 1}/${total}`;
+  document.getElementById('vs-progress').style.width = `${(vsState.current / total) * 100}%`;
+  vsState.answered = false;
+  vsState.startTime = Date.now();
+
+  // Build 4 options: 1 correct + 3 wrong from same level (prefer) or nearby
+  const pool = hskWords.filter(x => x.id !== w.id && x.sentence);
+  const sameLvl = pool.filter(x => x.level === w.level).sort(() => Math.random() - 0.5);
+  const otherLvl = pool.filter(x => x.level !== w.level).sort(() => Math.random() - 0.5);
+  const wrongs = [...sameLvl, ...otherLvl].slice(0, 3);
+  const options = [w, ...wrongs].sort(() => Math.random() - 0.5);
+
+  const sent = w.sentence;
+  const content = document.getElementById('vs-content');
+  content.innerHTML = `
+    <div class="sq-ko">${sent.ko}</div>
+    <div class="sq-sentence">${sent.blank.replace('___', '<span class="sq-blank" id="sq-blank">　　</span>')}</div>
+    <div class="mc-grid" id="mc-grid">
+      ${options.map(o => `
+        <button class="mc-option" data-id="${o.id}" data-answer="${o.chinese}" onclick="answerVocab(this, ${o.id === w.id}, ${w.id})">
+          ${o.chinese}
+          <div class="mc-pinyin">${o.pinyin}</div>
+          <div class="mc-meaning">${o.meaning}</div>
+        </button>
+      `).join('')}
+    </div>
+    <div id="vs-next" style="display:none;">
+      <button class="btn btn-primary btn-block" onclick="nextVocabQuestion()">다음</button>
+    </div>
+  `;
+}
+
+function answerVocab(el, isCorrect, wordId) {
+  if (vsState.answered) return;
+  vsState.answered = true;
+  const elapsed = Date.now() - vsState.startTime;
+  const w = vsState.queue[vsState.current];
+
+  vsState.totalAnswered++;
+  if (isCorrect) vsState.score++;
+
+  // Update SRS
+  updateVocabSRS(wordId, isCorrect, elapsed);
+  recordReview();
+
+  // If wrong, add to retry queue
+  if (!isCorrect) {
+    vsState.wrongQueue.push(w);
+  }
+
+  // Save result
+  vsState.results.push({ word: w, correct: isCorrect, time: elapsed });
+
+  // Update blank
+  const blank = document.getElementById('sq-blank');
+  if (blank) {
+    blank.textContent = w.sentence.answer;
+    blank.classList.add(isCorrect ? 'filled' : 'wrong-fill');
+  }
+
+  // Highlight options and reveal all meanings
+  document.querySelectorAll('#mc-grid .mc-option').forEach(btn => {
+    const btnId = parseInt(btn.dataset.id);
+    btn.classList.add('reveal'); // show meaning for all
+    if (btnId === wordId) {
+      btn.classList.add('correct');
+    } else if (btn === el && !isCorrect) {
+      btn.classList.add('wrong');
+    } else {
+      btn.classList.add('dim');
+    }
+    btn.style.pointerEvents = 'none';
+  });
+
+  // Show speed feedback + next button
+  const speedText = elapsed < 3000 ? '빠름!' : elapsed < 5000 ? '' : '천천히...';
+  const speedColor = elapsed < 3000 ? 'var(--success)' : elapsed < 5000 ? 'var(--text2)' : 'var(--warning)';
+  const nextDiv = document.getElementById('vs-next');
+  nextDiv.style.display = 'block';
+  nextDiv.innerHTML = `
+    <div style="text-align:center; margin-bottom:8px;">
+      <span style="font-size:13px; color:${speedColor};">${(elapsed/1000).toFixed(1)}초 ${speedText}</span>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="nextVocabQuestion()">다음</button>
+  `;
+}
+
+function nextVocabQuestion() {
+  vsState.current++;
+  renderVocabQuestion();
+}
+
+function showVocabResult() {
+  const total = vsState.totalAnswered;
+  const score = vsState.score;
+  const pct = total > 0 ? Math.round((score / total) * 100) : 0;
+  const avgTime = vsState.results.length > 0
+    ? (vsState.results.reduce((sum, r) => sum + r.time, 0) / vsState.results.length / 1000).toFixed(1)
+    : '-';
+
+  const wrongWords = vsState.results.filter(r => !r.correct);
+  const content = document.getElementById('vs-content');
+  content.innerHTML = `
+    <div class="result-screen">
+      <div class="result-score">${pct}%</div>
+      <div class="result-detail">${score}/${total} 정답 · 평균 ${avgTime}초</div>
+      <div style="margin-bottom:24px; color:var(--text2);">
+        ${pct >= 90 ? '완벽해요!' : pct >= 70 ? '잘하고 있어요!' : '틀린 단어를 다시 복습해보세요!'}
+      </div>
+      ${wrongWords.length > 0 ? `
+        <div style="text-align:left; margin-bottom:16px;">
+          <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">틀린 단어 (다음 세션에 다시 나옵니다)</div>
+          ${wrongWords.map(r => `
+            <div style="display:flex; justify-content:space-between; padding:8px 12px; background:var(--card); border-radius:8px; margin-bottom:4px;">
+              <span style="font-size:16px; font-weight:600;">${r.word.chinese} <span style="font-size:12px; color:var(--warning);">${r.word.pinyin}</span></span>
+              <span style="font-size:13px; color:var(--text2);">${r.word.meaning}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="showPage('vocab'); updateVocabStats();">돌아가기</button>
+        <button class="btn btn-primary" onclick="startVocabSession()">다시 학습</button>
+      </div>
+    </div>`;
+
+  document.getElementById('vs-counter').textContent = '완료!';
+  document.getElementById('vs-progress').style.width = '100%';
+}
+
 // =================== INIT ===================
 loadData();
+loadHskWords();
 
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {

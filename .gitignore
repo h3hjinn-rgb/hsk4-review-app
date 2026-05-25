@@ -1,3 +1,8 @@
 node_modules/
 data/test_*.txt
+data/raw_hsk_text.txt
+data/sentences_*.json
 parse-data.js
+parse-hsk-words.js
+getip.js
+server.js
