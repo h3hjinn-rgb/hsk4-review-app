@@ -2045,7 +2045,7 @@ function copyAndToast() {
 HSK 4급 수준으로 쉽게 설명해주세요. 문장 성분(주어/서술어/목적어/보어 등)과 문형(把자문, 겸어문, 연동문 등)도 알려주세요.`;
 
   navigator.clipboard.writeText(prompt).then(() => {
-    toast('복사 완료! ChatGPT 또는 Claude 앱에서 붙여넣기하세요');
+    toast('복사 완료!');
   }).catch(() => {
     const ta = document.createElement('textarea');
     ta.value = prompt;
@@ -2054,7 +2054,7 @@ HSK 4급 수준으로 쉽게 설명해주세요. 문장 성분(주어/서술어/
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    toast('복사 완료! ChatGPT 또는 Claude 앱에서 붙여넣기하세요');
+    toast('복사 완료!');
   });
 }
 
@@ -2710,7 +2710,7 @@ if ('serviceWorker' in navigator) {
   }).catch(() => {});
   // Purge old caches
   if (window.caches) {
-    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v12') caches.delete(k); }));
+    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v13') caches.delete(k); }));
   }
 }
 </script>
