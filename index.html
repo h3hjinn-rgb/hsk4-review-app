@@ -424,14 +424,17 @@ body {
       </div>
     </div>
 
-    <div id="daily-review-card" class="card" style="background: linear-gradient(135deg, #e94560, #0f3460); margin-bottom: 16px;">
-      <div class="card-title" style="font-size: 18px;">오늘의 복습</div>
-      <div class="card-sub" style="color: #ddd;" id="daily-review-desc">복습을 시작하세요</div>
-    </div>
-
     <div class="card" onclick="showPage('vocab')" style="background: linear-gradient(135deg, #0f3460, #533483);">
       <div class="card-title" style="font-size: 18px;">단어 학습</div>
-      <div class="card-sub" style="color: #ddd;">HSK 1~4급 1,200단어 플래시카드 & 퀴즈</div>
+      <div class="card-sub" style="color: #ddd;" id="home-vocab-desc">14일 플랜 - 예문 빈칸 채우기</div>
+    </div>
+    <div class="card" onclick="showPage('audio')">
+      <div class="card-title">듣기 연습</div>
+      <div class="card-sub">급수별 단어장 MP3 듣기</div>
+    </div>
+    <div class="card" onclick="showPage('typing')">
+      <div class="card-title">타이핑 연습</div>
+      <div class="card-sub">IBT 대비 중국어 입력 · 어순 배열</div>
     </div>
     <div class="card" onclick="showPage('test')">
       <div class="card-title">문장 테스트</div>
@@ -440,14 +443,6 @@ body {
     <div class="card" onclick="showPage('notes')">
       <div class="card-title">비밀노트</div>
       <div class="card-sub">22개 카테고리 - 핵심 단어 220개</div>
-    </div>
-    <div class="card" onclick="showPage('audio')">
-      <div class="card-title">듣기 연습</div>
-      <div class="card-sub">급수별 단어장 MP3 듣기</div>
-    </div>
-    <div class="card" onclick="showPage('typing')">
-      <div class="card-title">타이핑 연습</div>
-      <div class="card-sub">IBT 대비 중국어 입력 연습</div>
     </div>
   </div>
 
@@ -600,26 +595,42 @@ body {
   <div id="page-vocab" class="page">
     <div class="page-header">
       단어 학습
-      <small>HSK 1~4급 1,200단어 - 예문 빈칸 채우기</small>
+      <small id="plan-header-sub">14일 완성 플랜</small>
     </div>
+
+    <!-- Today's plan card -->
+    <div id="plan-today" style="background: linear-gradient(135deg, #0f3460, #533483); border-radius:var(--radius); padding:16px; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:11px; color:#aaa;" id="plan-day-label">Day 1 / 14</div>
+          <div style="font-size:18px; font-weight:700;" id="plan-level-label">1~2급 학습</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:24px; font-weight:700;" id="plan-today-remaining">0</div>
+          <div style="font-size:11px; color:#aaa;">오늘 남은 단어</div>
+        </div>
+      </div>
+      <div style="height:6px; background:rgba(255,255,255,0.15); border-radius:3px; margin-top:12px; overflow:hidden;">
+        <div id="plan-today-bar" style="height:100%; background:var(--success); width:0%; transition:width .5s;"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:11px; color:#aaa; margin-top:4px;">
+        <span id="plan-today-done">0개 완료</span>
+        <span id="plan-today-total">목표 0개</span>
+      </div>
+    </div>
+
+    <!-- 5 sessions -->
+    <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">오늘의 세션</div>
+    <div id="plan-sessions"></div>
+
+    <!-- Overall progress -->
+    <div style="font-size:13px; color:var(--text2); margin-top:16px; margin-bottom:8px;">전체 진도</div>
     <div class="vocab-stat-row">
-      <div class="vocab-stat-item"><div class="val c-green" id="v-mastered2">0</div><div class="lbl">암기 완료</div></div>
-      <div class="vocab-stat-item"><div class="val c-yellow" id="v-learning">0</div><div class="lbl">학습 중</div></div>
-      <div class="vocab-stat-item"><div class="val c-red" id="v-due">0</div><div class="lbl">복습 필요</div></div>
+      <div class="vocab-stat-item"><div class="val c-green" id="v-mastered2">0</div><div class="lbl">암기</div></div>
+      <div class="vocab-stat-item"><div class="val c-yellow" id="v-learning">0</div><div class="lbl">학습중</div></div>
+      <div class="vocab-stat-item"><div class="val c-red" id="v-due">0</div><div class="lbl">복습</div></div>
     </div>
-    <div class="chips" id="vocab-level-chips">
-      <div class="chip active" data-level="all" onclick="filterVocab('all')">전체</div>
-      <div class="chip" data-level="1" onclick="filterVocab('1')">1급</div>
-      <div class="chip" data-level="2" onclick="filterVocab('2')">2급</div>
-      <div class="chip" data-level="3" onclick="filterVocab('3')">3급</div>
-      <div class="chip" data-level="4" onclick="filterVocab('4')">4급</div>
-    </div>
-    <div id="vocab-start-card" class="card" style="background: linear-gradient(135deg, #0f3460, #533483); margin-bottom: 12px; text-align:center;" onclick="startVocabSession()">
-      <div class="card-title" style="font-size: 18px;">학습 시작</div>
-      <div class="card-sub" style="color: #ddd;" id="vocab-session-desc">복습 + 새 단어 20개</div>
-    </div>
-    <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">학습 진도</div>
-    <div id="vocab-progress-bar" style="height:8px; background:#333; border-radius:4px; overflow:hidden; margin-bottom:16px;">
+    <div style="height:8px; background:#333; border-radius:4px; overflow:hidden; margin-bottom:8px;">
       <div id="vocab-progress-fill" style="height:100%; background: linear-gradient(90deg, var(--success), var(--warning)); width:0%; transition: width .5s;"></div>
     </div>
     <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text2); margin-bottom:16px;">
@@ -808,7 +819,7 @@ function showPage(pageId) {
     n.classList.toggle('active', n.dataset.page === navPage);
   });
   if (pageId === 'home') updateHomeStats();
-  if (pageId === 'vocab') updateVocabStats();
+  if (pageId === 'vocab') updateVocabPage();
 }
 
 function toast(msg) {
@@ -1482,6 +1493,87 @@ function updateOrderDisplay() {
     }).join('');
 }
 
+// Build sentence structure analysis for word order quiz
+function buildSentenceAnalysis(segments, fullSentence) {
+  // Map each segment to its word info
+  const analysis = segments.map(seg => {
+    if (!seg || /^[。？！，、；：""''（）]+$/.test(seg)) return null;
+    const w = hskWords.find(x => x.chinese === seg);
+    if (w) {
+      // Determine grammatical role based on pos
+      let role = '';
+      const pos = w.pos;
+      if (['명사', '고유명사'].includes(pos)) role = '명사';
+      else if (pos === '동사' || pos === '이합동사') role = '동사';
+      else if (pos === '형용사') role = '형용사';
+      else if (pos === '부사') role = '부사';
+      else if (pos === '전치사') role = '전치사';
+      else if (pos === '접속사') role = '접속사';
+      else if (pos === '조사') role = '조사';
+      else if (pos === '조동사') role = '조동사';
+      else if (pos === '양사') role = '양사';
+      else if (pos === '수사') role = '수사';
+      else if (pos === '대명사') role = '대명사';
+      else role = pos || '';
+      return { seg, chinese: w.chinese, pinyin: w.pinyin, meaning: w.meaning, role };
+    }
+    // Try partial match for compound segments
+    let found = null;
+    for (const cw of hskWords) {
+      if (seg.includes(cw.chinese) && cw.chinese.length >= 2) {
+        found = cw; break;
+      }
+    }
+    if (found) return { seg, chinese: found.chinese, pinyin: found.pinyin, meaning: found.meaning, role: found.pos || '' };
+    return { seg, chinese: seg, pinyin: toPinyin(seg), meaning: '', role: '' };
+  }).filter(Boolean);
+
+  if (analysis.length === 0) return '<div style="font-size:13px; color:var(--text2);">해설 없음</div>';
+
+  // Role colors
+  const roleColors = {
+    '명사': '#60a5fa', '대명사': '#60a5fa',
+    '동사': '#f87171', '이합동사': '#f87171',
+    '형용사': '#4ade80', '부사': '#a78bfa',
+    '전치사': '#fbbf24', '조동사': '#fb923c',
+    '접속사': '#94a3b8', '조사': '#94a3b8',
+    '양사': '#2dd4bf', '수사': '#2dd4bf',
+  };
+
+  let html = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">';
+  for (const a of analysis) {
+    const color = roleColors[a.role] || '#aaa';
+    html += `<div style="text-align:center;">
+      <div style="font-size:16px; font-weight:600;">${a.seg}</div>
+      <div style="font-size:10px; color:var(--warning);">${a.pinyin || ''}</div>
+      <div style="font-size:10px; color:${color}; font-weight:600;">${a.role}</div>
+      <div style="font-size:10px; color:var(--text2); max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${a.meaning.split(',')[0] || ''}</div>
+    </div>`;
+  }
+  html += '</div>';
+
+  // Add basic structure explanation
+  const hasSubj = analysis.some(a => ['명사', '대명사'].includes(a.role));
+  const hasVerb = analysis.some(a => ['동사', '이합동사'].includes(a.role));
+  const hasObj = analysis.filter(a => ['명사', '대명사'].includes(a.role)).length > 1;
+  const hasAdv = analysis.some(a => a.role === '부사');
+  const hasPrep = analysis.some(a => a.role === '전치사');
+
+  let structure = '구조: ';
+  const parts = [];
+  if (hasSubj) parts.push('<span style="color:#60a5fa;">주어</span>');
+  if (hasAdv) parts.push('<span style="color:#a78bfa;">부사</span>');
+  if (hasPrep) parts.push('<span style="color:#fbbf24;">전치사구</span>');
+  if (hasVerb) parts.push('<span style="color:#f87171;">동사</span>');
+  if (hasObj) parts.push('<span style="color:#60a5fa;">목적어</span>');
+  structure += parts.join(' + ');
+
+  html += `<div style="font-size:11px; color:var(--text2); margin-top:4px;">${structure}</div>`;
+  html += `<div style="font-size:11px; color:var(--text2); margin-top:2px;">중국어 기본 어순: 주어 + (시간/부사) + 동사 + 목적어</div>`;
+
+  return html;
+}
+
 // Lookup Chinese word/segment meaning from hskWords
 function lookupChineseWord(text) {
   if (!hskWords || hskWords.length === 0) return '';
@@ -1530,11 +1622,9 @@ function checkOrder() {
     <div style="font-size:14px; color:var(--text2); margin-bottom:4px;">정답:</div>
     <div style="font-size:20px;">${correctAnswer}</div>
     <div style="font-size:13px; color:var(--warning); margin-top:4px;">${toPinyin(correctAnswer)}</div>
-    <div style="margin-top:8px; font-size:13px; color:var(--text2);">
-      ${orderState.answer.map(seg => {
-        const info = lookupChineseWord(seg);
-        return info ? `<span style="margin-right:8px;">${seg}<span style="color:var(--warning);"> ${info}</span></span>` : '';
-      }).filter(s => s).join('')}
+    <div style="margin-top:12px; padding:12px; background:var(--bg); border-radius:10px;">
+      <div style="font-size:12px; color:var(--accent); font-weight:600; margin-bottom:8px;">문장 해설</div>
+      ${buildSentenceAnalysis(orderState.answer, correctAnswer)}
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="currentTypingIdx++; renderOrderQuestion();">다음</button>`;
 
@@ -1542,17 +1632,6 @@ function checkOrder() {
 }
 
 // =================== DAILY REVIEW ===================
-document.getElementById('daily-review-card').onclick = function() {
-  const dueWords = getDueWords();
-  if (dueWords.length === 0) {
-    // Get random words to review
-    const allWords = secretNotes.flatMap(c => c.words);
-    const shuffled = allWords.sort(() => Math.random() - 0.5).slice(0, 10);
-    startDailyReview(shuffled.map(w => ({ ...w, srsKey: `word_${w.chinese}` })));
-  } else {
-    startDailyReview(dueWords.slice(0, 20));
-  }
-};
 
 function startDailyReview(words) {
   wqState = { words, current: 0, score: 0 };
@@ -1560,16 +1639,84 @@ function startDailyReview(words) {
   renderWordQuiz();
 }
 
-// =================== VOCAB - 말해보카 Style ===================
+// =================== VOCAB - 14 Day Plan ===================
 let hskWords = [];
 let vocabFilter = 'all';
-let vsState = null; // vocab session state
+let vsState = null;
+
+// 14-day plan: {day, idFrom, idTo, daily target}
+const PLAN = [
+  { day:1,  from:1,   to:150,  label:'1급 학습' },
+  { day:2,  from:151, to:300,  label:'2급 학습' },
+  { day:3,  from:301, to:400,  label:'3급 전반' },
+  { day:4,  from:401, to:500,  label:'3급 중반' },
+  { day:5,  from:501, to:600,  label:'3급 후반' },
+  { day:6,  from:601, to:675,  label:'4급 ①' },
+  { day:7,  from:676, to:750,  label:'4급 ②' },
+  { day:8,  from:751, to:825,  label:'4급 ③' },
+  { day:9,  from:826, to:900,  label:'4급 ④' },
+  { day:10, from:901, to:1000, label:'4급 ⑤' },
+  { day:11, from:1001,to:1100, label:'4급 ⑥' },
+  { day:12, from:1101,to:1200, label:'4급 ⑦' },
+  { day:13, from:1,   to:600,  label:'1~3급 총복습' },
+  { day:14, from:601, to:1200, label:'4급 총복습' },
+];
+
+// 5 sessions per day
+const SESSIONS = [
+  { id: 1, icon: '🌅', name: '출근 1', desc: '새 단어 학습', time: '출근길', type: 'new' },
+  { id: 2, icon: '🚇', name: '출근 2', desc: '새 단어 학습', time: '출근길', type: 'new' },
+  { id: 3, icon: '☀️', name: '출근 3', desc: '새 단어 + 복습', time: '출근길', type: 'mixed' },
+  { id: 4, icon: '🌆', name: '퇴근', desc: '오전 복습', time: '퇴근길', type: 'review' },
+  { id: 5, icon: '🌙', name: '자기 전', desc: '오늘 틀린 것 마무리', time: '자기 전', type: 'review' },
+];
+
+function getPlanState() {
+  let state = JSON.parse(localStorage.getItem('hsk4_plan') || 'null');
+  if (!state) {
+    state = { startDate: new Date().toDateString(), completedSessions: {} };
+    localStorage.setItem('hsk4_plan', JSON.stringify(state));
+  }
+  return state;
+}
+
+function savePlanState(state) {
+  localStorage.setItem('hsk4_plan', JSON.stringify(state));
+}
+
+function getPlanDay() {
+  const state = getPlanState();
+  const start = new Date(state.startDate);
+  const now = new Date();
+  const diff = Math.floor((now - start) / 86400000) + 1;
+  return Math.min(Math.max(diff, 1), 14);
+}
+
+function getTodayPlan() {
+  const day = getPlanDay();
+  return PLAN[day - 1];
+}
+
+function getTodaySessionKey(sessionId) {
+  return new Date().toDateString() + '_s' + sessionId;
+}
+
+function isSessionDone(sessionId) {
+  const state = getPlanState();
+  return !!state.completedSessions[getTodaySessionKey(sessionId)];
+}
+
+function markSessionDone(sessionId) {
+  const state = getPlanState();
+  state.completedSessions[getTodaySessionKey(sessionId)] = true;
+  savePlanState(state);
+}
 
 async function loadHskWords() {
   try {
     const res = await fetch('data/hskWords.json');
     hskWords = await res.json();
-    updateVocabStats();
+    updateVocabPage();
   } catch(e) { console.error('Failed to load HSK words:', e); }
 }
 
@@ -1584,132 +1731,196 @@ function getVocabSRS(wordId) {
 function updateVocabSRS(wordId, correct, responseTime) {
   const key = 'hsk_' + wordId;
   const s = getVocabSRS(wordId);
-  const intervals = [0, 0.5, 1, 3, 7, 14, 30, 60]; // days
+  const intervals = [0, 0.5, 1, 3, 7, 14, 30, 60];
 
   if (correct) {
-    // Speed-based: fast=jump more, slow=jump less
     if (responseTime < 3000) {
-      s.level = Math.min(s.level + 2, intervals.length - 1); // fast: +2
+      s.level = Math.min(s.level + 2, intervals.length - 1);
     } else if (responseTime < 5000) {
-      s.level = Math.min(s.level + 1, intervals.length - 1); // normal: +1
+      s.level = Math.min(s.level + 1, intervals.length - 1);
     }
-    // slow (>5s): level stays same (review again soon)
     s.correct++;
   } else {
-    s.level = 0; // wrong: reset to 0 (come back immediately)
+    s.level = 0;
     s.wrong++;
   }
 
-  // Update average response time
   const total = s.correct + s.wrong;
   s.avgTime = total <= 1 ? responseTime : Math.round(s.avgTime * 0.7 + responseTime * 0.3);
   s.nextReview = Date.now() + intervals[s.level] * 86400000;
   saveSRS();
 }
 
-function updateVocabStats() {
-  const filtered = vocabFilter === 'all' ? hskWords : hskWords.filter(w => w.level == vocabFilter);
+function getTodayWords() {
+  const plan = getTodayPlan();
+  return hskWords.filter(w => w.id >= plan.from && w.id <= plan.to && w.sentence);
+}
+
+function getDueVocabWords(wordPool) {
+  const pool = wordPool || hskWords;
+  return pool.filter(w => {
+    if (!w.sentence) return false;
+    const s = getVocabSRS(w.id);
+    if (s.level === 0 && (s.correct > 0 || s.wrong > 0)) return true;
+    return s.level > 0 && s.nextReview <= Date.now();
+  });
+}
+
+function getNewVocabWords(wordPool) {
+  const pool = wordPool || hskWords;
+  return pool.filter(w => {
+    if (!w.sentence) return false;
+    const s = getVocabSRS(w.id);
+    return s.level === 0 && s.correct === 0 && s.wrong === 0;
+  });
+}
+
+function updateVocabPage() {
+  if (hskWords.length === 0) return;
+  const plan = getTodayPlan();
+  const day = getPlanDay();
+  const todayWords = getTodayWords();
+  const todayNew = getNewVocabWords(todayWords);
+  const todayDue = getDueVocabWords(todayWords);
+  const todayDone = todayWords.length - todayNew.length;
+  const todayTarget = todayWords.length;
+
+  // Header
+  document.getElementById('plan-day-label').textContent = `Day ${day} / 14`;
+  document.getElementById('plan-level-label').textContent = plan.label;
+  document.getElementById('plan-today-remaining').textContent = todayNew.length + todayDue.length;
+  document.getElementById('plan-today-bar').style.width = `${(todayDone / todayTarget) * 100}%`;
+  document.getElementById('plan-today-done').textContent = `${todayDone}개 완료`;
+  document.getElementById('plan-today-total').textContent = `목표 ${todayTarget}개`;
+
+  if (day >= 13) {
+    document.getElementById('plan-header-sub').textContent = '총복습 기간';
+  }
+
+  // Render 5 sessions
+  const sessContainer = document.getElementById('plan-sessions');
+  let prevTime = '';
+  let html = '';
+
+  for (const sess of SESSIONS) {
+    const done = isSessionDone(sess.id);
+    // Time divider
+    if (sess.time !== prevTime) {
+      html += `<div style="font-size:12px; color:var(--warning); margin:12px 0 6px; font-weight:600;">${sess.time}</div>`;
+      prevTime = sess.time;
+    }
+
+    // Calculate what this session will have
+    let sessDesc = sess.desc;
+    if (!done) {
+      if (sess.type === 'new') {
+        const n = Math.min(getNewVocabWords(todayWords).length, 20);
+        sessDesc = n > 0 ? `새 단어 ${n}개` : '복습 위주';
+      } else if (sess.type === 'review') {
+        const d = getDueVocabWords(hskWords).length;
+        sessDesc = d > 0 ? `복습 ${Math.min(d, 20)}개` : '복습할 단어 없음';
+      } else {
+        const n = Math.min(getNewVocabWords(todayWords).length, 10);
+        const d = Math.min(getDueVocabWords(todayWords).length, 10);
+        sessDesc = `새 ${n}개 + 복습 ${d}개`;
+      }
+    }
+
+    html += `<div class="card" style="padding:12px 16px; ${done ? 'opacity:0.5;' : ''}" onclick="${done ? '' : `startPlanSession(${sess.id},'${sess.type}')`}">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="font-size:24px;">${sess.icon}</div>
+        <div style="flex:1;">
+          <div class="card-title" style="font-size:14px;">${sess.name}</div>
+          <div class="card-sub">${sessDesc}</div>
+        </div>
+        ${done ? '<div style="color:var(--success); font-size:13px; font-weight:600;">완료</div>' : '<div style="color:var(--accent); font-size:20px;">›</div>'}
+      </div>
+    </div>`;
+  }
+  sessContainer.innerHTML = html;
+
+  // Overall stats
   let mastered = 0, learning = 0, due = 0;
-  for (const w of filtered) {
+  for (const w of hskWords) {
     const s = getVocabSRS(w.id);
     if (s.level >= 5) mastered++;
     else if (s.level > 0) learning++;
     if (s.level > 0 && s.nextReview <= Date.now()) due++;
-    else if (s.level === 0 && (s.correct > 0 || s.wrong > 0)) due++; // wrong ones
+    else if (s.level === 0 && (s.correct > 0 || s.wrong > 0)) due++;
   }
   document.getElementById('v-mastered2').textContent = mastered;
   document.getElementById('v-learning').textContent = learning;
   document.getElementById('v-due').textContent = due;
 
-  // Progress bar
-  const total = filtered.length;
   const learnedCount = mastered + learning;
-  document.getElementById('vocab-progress-fill').style.width = `${(learnedCount / total) * 100}%`;
-  document.getElementById('vocab-progress-text').textContent = `${learnedCount} / ${total}`;
+  document.getElementById('vocab-progress-fill').style.width = `${(learnedCount / 1200) * 100}%`;
+  document.getElementById('vocab-progress-text').textContent = `${learnedCount} / 1200`;
 
-  // Average speed
   let totalTime = 0, timeCount = 0;
-  for (const w of filtered) {
+  for (const w of hskWords) {
     const s = getVocabSRS(w.id);
     if (s.avgTime > 0) { totalTime += s.avgTime; timeCount++; }
   }
-  const avgSec = timeCount > 0 ? (totalTime / timeCount / 1000).toFixed(1) : '-';
-  document.getElementById('vocab-avg-speed').textContent = `평균 응답: ${avgSec}초`;
-
-  // Session description
-  const dueWords = getDueVocabWords().length;
-  const newWords = getNewVocabWords().length;
-  const desc = document.getElementById('vocab-session-desc');
-  if (desc) {
-    if (dueWords > 0) desc.textContent = `복습 ${Math.min(dueWords, 10)}개 + 새 단어 ${Math.min(newWords, 10)}개`;
-    else desc.textContent = `새 단어 ${Math.min(newWords, 20)}개 학습`;
-  }
+  document.getElementById('vocab-avg-speed').textContent = `평균 응답: ${timeCount > 0 ? (totalTime / timeCount / 1000).toFixed(1) : '-'}초`;
 }
 
-function filterVocab(level) {
-  vocabFilter = level;
-  document.querySelectorAll('#vocab-level-chips .chip').forEach(c => {
-    c.classList.toggle('active', c.dataset.level === level);
-  });
-  updateVocabStats();
-}
+function filterVocab() {} // no longer needed but keep for compatibility
 
-function getDueVocabWords() {
-  const filtered = vocabFilter === 'all' ? hskWords : hskWords.filter(w => w.level == vocabFilter);
-  return filtered.filter(w => {
-    const s = getVocabSRS(w.id);
-    if (s.level === 0 && (s.correct > 0 || s.wrong > 0)) return true; // previously wrong
-    return s.level > 0 && s.nextReview <= Date.now();
-  }).filter(w => w.sentence); // only words with sentences
-}
-
-function getNewVocabWords() {
-  const filtered = vocabFilter === 'all' ? hskWords : hskWords.filter(w => w.level == vocabFilter);
-  return filtered.filter(w => {
-    const s = getVocabSRS(w.id);
-    return s.level === 0 && s.correct === 0 && s.wrong === 0;
-  }).filter(w => w.sentence); // only words with sentences
-}
-
-// --- Session ---
-function startVocabSession() {
-  // Build queue: review words first, then new words
+// --- Plan Session ---
+function startPlanSession(sessionId, type) {
+  const todayWords = getTodayWords();
   let queue = [];
-  const dueWords = getDueVocabWords().sort((a, b) => {
-    const sa = getVocabSRS(a.id), sb = getVocabSRS(b.id);
-    return sa.nextReview - sb.nextReview;
-  });
-  const newWords = getNewVocabWords();
 
-  // Take up to 10 review + 10 new = 20 total
-  queue.push(...dueWords.slice(0, 10));
-  const remaining = 20 - queue.length;
-  queue.push(...newWords.slice(0, remaining));
+  if (type === 'new') {
+    // New words first, fill with review
+    const newW = getNewVocabWords(todayWords).slice(0, 20);
+    queue.push(...newW);
+    if (queue.length < 20) {
+      const dueW = getDueVocabWords(todayWords).slice(0, 20 - queue.length);
+      queue.push(...dueW);
+    }
+  } else if (type === 'review') {
+    // Review from ALL words (not just today's), prioritize due
+    const allDue = getDueVocabWords(hskWords).sort((a, b) => getVocabSRS(a.id).nextReview - getVocabSRS(b.id).nextReview);
+    queue.push(...allDue.slice(0, 20));
+    // If not enough, add today's new
+    if (queue.length < 10) {
+      const newW = getNewVocabWords(todayWords).slice(0, 20 - queue.length);
+      queue.push(...newW);
+    }
+  } else {
+    // Mixed: half new, half review
+    const newW = getNewVocabWords(todayWords).slice(0, 10);
+    const dueW = getDueVocabWords(todayWords).slice(0, 10);
+    queue.push(...dueW, ...newW);
+  }
 
   if (queue.length === 0) {
-    toast('학습할 단어가 없습니다');
+    toast('이 세션에서 학습할 단어가 없습니다');
     return;
   }
 
-  // Shuffle the queue (but keep review words slightly earlier)
-  const reviewPart = queue.filter(w => dueWords.includes(w)).sort(() => Math.random() - 0.5);
-  const newPart = queue.filter(w => !dueWords.includes(w)).sort(() => Math.random() - 0.5);
-  queue = [...reviewPart, ...newPart];
+  // Shuffle within groups
+  queue.sort(() => Math.random() - 0.5);
 
   vsState = {
     queue,
     current: 0,
     score: 0,
     totalAnswered: 0,
-    wrongQueue: [], // words to retry at end
+    wrongQueue: [],
     startTime: 0,
     answered: false,
-    results: [] // {word, correct, time}
+    results: [],
+    sessionId: sessionId || 0
   };
 
   showPage('vocabsession');
   renderVocabQuestion();
 }
+
+// Legacy compat
+function startVocabSession() { startPlanSession(0, 'mixed'); }
 
 function confirmQuitVocab() {
   if (confirm('학습을 종료할까요?')) {
@@ -1856,13 +2067,16 @@ function showVocabResult() {
         </div>
       ` : ''}
       <div class="btn-group">
-        <button class="btn btn-outline" onclick="showPage('vocab'); updateVocabStats();">돌아가기</button>
+        <button class="btn btn-outline" onclick="showPage('vocab'); updateVocabPage();">돌아가기</button>
         <button class="btn btn-primary" onclick="startVocabSession()">다시 학습</button>
       </div>
     </div>`;
 
   document.getElementById('vs-counter').textContent = '완료!';
   document.getElementById('vs-progress').style.width = '100%';
+
+  // Mark session as done
+  if (vsState.sessionId > 0) markSessionDone(vsState.sessionId);
 }
 
 // =================== INIT ===================
