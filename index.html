@@ -1519,26 +1519,104 @@ function renderOrderQuestion() {
   document.getElementById('order-feedback').style.display = 'none';
 }
 
+let dragState = { active: false, idx: -1, el: null };
+
 function updateOrderDisplay() {
-  document.getElementById('order-selected').innerHTML =
-    orderState.selected.length === 0
-      ? '<span style="color:#555;">여기를 탭하여 단어를 배열하세요</span>'
-      : orderState.selected.map((s, i) => {
-          const info = lookupChineseWord(s);
-          return `<span onclick="unselectOrder(${i})" style="display:inline-flex;flex-direction:column;align-items:center;padding:4px 10px;margin:2px;background:var(--accent2);border-radius:8px;cursor:pointer;">
-            <span style="font-size:18px;">${s}</span>
-            ${info ? `<span style="font-size:9px;color:#aaa;">${info}</span>` : ''}
-          </span>`;
-        }).join('');
+  const selContainer = document.getElementById('order-selected');
+  if (orderState.selected.length === 0) {
+    selContainer.innerHTML = '<span style="color:#555;">아래 단어를 탭하여 배열하세요</span>';
+  } else {
+    selContainer.innerHTML = orderState.selected.map((s, i) => {
+      const info = lookupChineseWord(s);
+      return `<span class="order-chip" data-idx="${i}" style="display:inline-flex;flex-direction:column;align-items:center;padding:6px 12px;margin:3px;background:var(--accent2);border-radius:8px;cursor:grab;user-select:none;touch-action:none;transition:transform .15s,opacity .15s;">
+        <span style="font-size:18px;pointer-events:none;">${s}</span>
+        ${info ? `<span style="font-size:9px;color:#aaa;pointer-events:none;">${info}</span>` : ''}
+      </span>`;
+    }).join('');
+
+    // Attach drag handlers to each chip
+    selContainer.querySelectorAll('.order-chip').forEach(chip => {
+      // Tap to remove
+      chip.addEventListener('click', (e) => {
+        if (dragState.active) return;
+        unselectOrder(parseInt(chip.dataset.idx));
+      });
+      // Drag to reorder (touch)
+      chip.addEventListener('touchstart', handleDragStart, { passive: false });
+    });
+  }
 
   document.getElementById('order-choices').innerHTML =
     orderState.remaining.map((s, i) => {
       const info = lookupChineseWord(s);
-      return `<span onclick="selectOrder(${i})" style="display:inline-flex;flex-direction:column;align-items:center;padding:8px 14px;background:var(--card);border:1px solid #444;border-radius:10px;cursor:pointer;transition:all .15s;">
-        <span style="font-size:18px;">${s}</span>
-        ${info ? `<span style="font-size:10px;color:var(--text2);margin-top:2px;">${info}</span>` : ''}
+      return `<span onclick="selectOrder(${i})" style="display:inline-flex;flex-direction:column;align-items:center;padding:8px 14px;background:var(--card);border:1px solid #444;border-radius:10px;cursor:pointer;transition:all .15s;user-select:none;">
+        <span style="font-size:18px;pointer-events:none;">${s}</span>
+        ${info ? `<span style="font-size:10px;color:var(--text2);margin-top:2px;pointer-events:none;">${info}</span>` : ''}
       </span>`;
     }).join('');
+}
+
+// --- Drag to reorder ---
+function handleDragStart(e) {
+  const chip = e.currentTarget;
+  const idx = parseInt(chip.dataset.idx);
+  const touch = e.touches[0];
+
+  // Long-press detection: start drag after 200ms hold
+  let moved = false;
+  const startX = touch.clientX, startY = touch.clientY;
+  const rect = chip.getBoundingClientRect();
+
+  const holdTimer = setTimeout(() => {
+    dragState = { active: true, idx, el: chip, startX, startY, offsetX: startX - rect.left, offsetY: startY - rect.top };
+    chip.style.opacity = '0.7';
+    chip.style.transform = 'scale(1.1)';
+    chip.style.zIndex = '50';
+    chip.style.position = 'relative';
+    // Vibrate if available
+    if (navigator.vibrate) navigator.vibrate(30);
+  }, 200);
+
+  const onMove = (ev) => {
+    const t = ev.touches[0];
+    if (Math.abs(t.clientX - startX) > 5 || Math.abs(t.clientY - startY) > 5) moved = true;
+    if (!dragState.active) return;
+    ev.preventDefault();
+
+    // Find which chip we're over
+    const container = document.getElementById('order-selected');
+    const chips = container.querySelectorAll('.order-chip');
+    let targetIdx = dragState.idx;
+    chips.forEach((c, ci) => {
+      if (ci === dragState.idx) return;
+      const r = c.getBoundingClientRect();
+      if (t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom) {
+        targetIdx = ci;
+      }
+    });
+
+    if (targetIdx !== dragState.idx) {
+      // Swap
+      const arr = orderState.selected;
+      const item = arr.splice(dragState.idx, 1)[0];
+      arr.splice(targetIdx, 0, item);
+      dragState.idx = targetIdx;
+      updateOrderDisplay();
+    }
+  };
+
+  const onEnd = () => {
+    clearTimeout(holdTimer);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+    if (dragState.active) {
+      dragState.active = false;
+      updateOrderDisplay();
+    }
+  };
+
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', onEnd);
 }
 
 // Build sentence structure analysis for word order quiz
