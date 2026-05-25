@@ -1464,14 +1464,36 @@ function updateOrderDisplay() {
   document.getElementById('order-selected').innerHTML =
     orderState.selected.length === 0
       ? '<span style="color:#555;">여기를 탭하여 단어를 배열하세요</span>'
-      : orderState.selected.map((s, i) =>
-          `<span onclick="unselectOrder(${i})" style="display:inline-block;padding:4px 10px;margin:2px;background:var(--accent2);border-radius:8px;cursor:pointer;font-size:18px;">${s}</span>`
-        ).join('');
+      : orderState.selected.map((s, i) => {
+          const info = lookupChineseWord(s);
+          return `<span onclick="unselectOrder(${i})" style="display:inline-flex;flex-direction:column;align-items:center;padding:4px 10px;margin:2px;background:var(--accent2);border-radius:8px;cursor:pointer;">
+            <span style="font-size:18px;">${s}</span>
+            ${info ? `<span style="font-size:9px;color:#aaa;">${info}</span>` : ''}
+          </span>`;
+        }).join('');
 
   document.getElementById('order-choices').innerHTML =
-    orderState.remaining.map((s, i) =>
-      `<span onclick="selectOrder(${i})" style="display:inline-block;padding:8px 14px;background:var(--card);border:1px solid #444;border-radius:10px;cursor:pointer;font-size:18px;transition:all .15s;">${s}</span>`
-    ).join('');
+    orderState.remaining.map((s, i) => {
+      const info = lookupChineseWord(s);
+      return `<span onclick="selectOrder(${i})" style="display:inline-flex;flex-direction:column;align-items:center;padding:8px 14px;background:var(--card);border:1px solid #444;border-radius:10px;cursor:pointer;transition:all .15s;">
+        <span style="font-size:18px;">${s}</span>
+        ${info ? `<span style="font-size:10px;color:var(--text2);margin-top:2px;">${info}</span>` : ''}
+      </span>`;
+    }).join('');
+}
+
+// Lookup Chinese word/segment meaning from hskWords
+function lookupChineseWord(text) {
+  if (!hskWords || hskWords.length === 0) return '';
+  // Try exact match first
+  const exact = hskWords.find(w => w.chinese === text);
+  if (exact) return exact.meaning.split(',')[0].split('，')[0].trim();
+  // Try finding a word contained in the segment
+  if (text.length >= 2) {
+    const partial = hskWords.find(w => text.includes(w.chinese) && w.chinese.length >= 2);
+    if (partial) return partial.meaning.split(',')[0].split('，')[0].trim();
+  }
+  return '';
 }
 
 function selectOrder(idx) {
@@ -1508,6 +1530,12 @@ function checkOrder() {
     <div style="font-size:14px; color:var(--text2); margin-bottom:4px;">정답:</div>
     <div style="font-size:20px;">${correctAnswer}</div>
     <div style="font-size:13px; color:var(--warning); margin-top:4px;">${toPinyin(correctAnswer)}</div>
+    <div style="margin-top:8px; font-size:13px; color:var(--text2);">
+      ${orderState.answer.map(seg => {
+        const info = lookupChineseWord(seg);
+        return info ? `<span style="margin-right:8px;">${seg}<span style="color:var(--warning);"> ${info}</span></span>` : '';
+      }).filter(s => s).join('')}
+    </div>
     <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="currentTypingIdx++; renderOrderQuestion();">다음</button>`;
 
   recordReview();
