@@ -1938,7 +1938,7 @@ function startVocabSession() { startPlanSession(0, 'mixed'); }
 function confirmQuitVocab() {
   if (confirm('학습을 종료할까요?')) {
     showPage('vocab');
-    updateVocabStats();
+    updateVocabPage();
   }
 }
 
@@ -1973,22 +1973,34 @@ function renderVocabQuestion() {
 
   const sent = w.sentence;
   const content = document.getElementById('vs-content');
+
+  // Escape HTML for safe rendering
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
   content.innerHTML = `
-    <div class="sq-ko">${sent.ko}</div>
-    <div class="sq-sentence">${sent.blank.replace('___', '<span class="sq-blank" id="sq-blank">　　</span>')}</div>
+    <div class="sq-ko">${esc(sent.ko)}</div>
+    <div class="sq-sentence">${esc(sent.blank).replace('___', '<span class="sq-blank" id="sq-blank">\u3000\u3000</span>')}</div>
     <div class="mc-grid" id="mc-grid">
       ${options.map(o => `
-        <button class="mc-option" data-id="${o.id}" data-answer="${o.chinese}" onclick="answerVocab(this, ${o.id === w.id}, ${w.id})">
-          ${o.chinese}
-          <div class="mc-pinyin">${o.pinyin}</div>
-          <div class="mc-meaning">${o.meaning}</div>
+        <button class="mc-option" data-id="${o.id}" data-correct="${o.id === w.id}" data-word-id="${w.id}">
+          ${esc(o.chinese)}
+          <div class="mc-pinyin">${esc(o.pinyin)}</div>
+          <div class="mc-meaning">${esc(o.meaning)}</div>
         </button>
       `).join('')}
     </div>
     <div id="vs-next" style="display:none;">
-      <button class="btn btn-primary btn-block" onclick="nextVocabQuestion()">다음</button>
+      <button class="btn btn-primary btn-block" id="vs-next-btn">다음</button>
     </div>
   `;
+
+  // Event delegation instead of inline onclick
+  document.querySelectorAll('#mc-grid .mc-option').forEach(btn => {
+    btn.addEventListener('click', function() {
+      answerVocab(this, this.dataset.correct === 'true', parseInt(this.dataset.wordId));
+    });
+  });
+  document.getElementById('vs-next-btn').addEventListener('click', nextVocabQuestion);
 }
 
 function answerVocab(el, isCorrect, wordId) {
@@ -2042,8 +2054,9 @@ function answerVocab(el, isCorrect, wordId) {
     <div style="text-align:center; margin-bottom:8px;">
       <span style="font-size:13px; color:${speedColor};">${(elapsed/1000).toFixed(1)}초 ${speedText}</span>
     </div>
-    <button class="btn btn-primary btn-block" onclick="nextVocabQuestion()">다음</button>
+    <button class="btn btn-primary btn-block" id="vs-next-btn2">다음</button>
   `;
+  document.getElementById('vs-next-btn2').addEventListener('click', nextVocabQuestion);
 }
 
 function nextVocabQuestion() {
