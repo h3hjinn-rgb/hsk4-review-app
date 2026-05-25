@@ -1874,9 +1874,81 @@ function checkOrder() {
       <div style="font-size:12px; color:var(--accent); font-weight:600; margin-bottom:8px;">문장 해설</div>
       ${buildSentenceAnalysis(orderState.answer, correctAnswer)}
     </div>
-    <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="currentTypingIdx++; renderOrderQuestion();">다음</button>`;
+    <div id="ask-ai-area" style="margin-top:12px;">
+      <button class="btn btn-outline btn-block" style="border-color:#a78bfa;color:#a78bfa;" id="order-ask-ai-btn">AI에게 질문하기</button>
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="currentTypingIdx++; renderOrderQuestion();">다음</button>`;
 
   recordReview();
+
+  // Attach AI question button
+  const q = typingWords[currentTypingIdx % typingWords.length];
+  document.getElementById('order-ask-ai-btn')?.addEventListener('click', () => {
+    showAskAIPanel('ask-ai-area', correctAnswer, q.korean);
+  });
+}
+
+// =================== AI QUESTION ===================
+let _askSentence = '', _askKorean = '';
+
+function toggleAskAI(sentence, korean) {
+  showAskAIPanel('ask-ai-area', sentence, korean);
+}
+
+function showAskAIPanel(containerId, sentence, korean) {
+  _askSentence = sentence;
+  _askKorean = korean;
+  const area = document.getElementById(containerId);
+  if (!area) return;
+  area.innerHTML = `
+    <div style="background:var(--card); border-radius:12px; padding:12px; border:1px solid #a78bfa33;">
+      <div style="font-size:12px; color:#a78bfa; font-weight:600; margin-bottom:8px;">무엇이 궁금한가요?</div>
+      <textarea id="ask-ai-input" placeholder="예: 왜 把를 여기서 쓰나요? / 이 문장은 무슨 문형인가요?" style="width:100%;padding:10px;font-size:14px;background:var(--bg);border:1px solid #333;border-radius:8px;color:var(--text);outline:none;resize:none;min-height:60px;"></textarea>
+      <div class="btn-group" style="margin-top:8px;">
+        <button class="btn btn-outline" style="flex:1;font-size:13px;border-color:#10a37f;color:#10a37f;" id="ask-gpt-btn">ChatGPT</button>
+        <button class="btn btn-outline" style="flex:1;font-size:13px;border-color:#a78bfa;color:#a78bfa;" id="ask-claude-btn">Claude</button>
+      </div>
+      <div style="font-size:10px; color:var(--text2); margin-top:6px; text-align:center;">문장+질문이 클립보드에 복사되고 AI가 열립니다</div>
+    </div>`;
+  document.getElementById('ask-gpt-btn').addEventListener('click', () => askAI('chatgpt'));
+  document.getElementById('ask-claude-btn').addEventListener('click', () => askAI('claude'));
+  setTimeout(() => document.getElementById('ask-ai-input')?.focus(), 100);
+}
+
+function askAI(service) {
+  const sentence = _askSentence;
+  const korean = _askKorean;
+  const question = document.getElementById('ask-ai-input')?.value?.trim() || '이 문장의 문법 구조를 자세히 설명해주세요';
+  const prompt = `중국어 문장을 공부하고 있습니다. 아래 문장에 대해 질문이 있어요.
+
+문장: ${sentence}
+해석: ${korean}
+병음: ${toPinyin(sentence)}
+
+질문: ${question}
+
+HSK 4급 수준으로 쉽게 설명해주세요. 문장 성분(주어/서술어/목적어/보어 등)과 문형(把자문, 겸어문, 연동문 등)도 알려주세요.`;
+
+  // Copy to clipboard
+  navigator.clipboard.writeText(prompt).then(() => {
+    toast('질문이 클립보드에 복사됐어요!');
+  }).catch(() => {
+    // Fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = prompt;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('질문이 클립보드에 복사됐어요!');
+  });
+
+  // Open AI service
+  const urls = {
+    chatgpt: 'https://chat.openai.com/',
+    claude: 'https://claude.ai/new'
+  };
+  setTimeout(() => window.open(urls[service], '_blank'), 300);
 }
 
 // =================== DAILY REVIEW ===================
@@ -2322,15 +2394,22 @@ function answerVocab(el, isCorrect, wordId) {
   // Show speed feedback + next button
   const speedText = elapsed < 3000 ? '빠름!' : elapsed < 5000 ? '' : '천천히...';
   const speedColor = elapsed < 3000 ? 'var(--success)' : elapsed < 5000 ? 'var(--text2)' : 'var(--warning)';
+  const sent = w.sentence;
   const nextDiv = document.getElementById('vs-next');
   nextDiv.style.display = 'block';
   nextDiv.innerHTML = `
     <div style="text-align:center; margin-bottom:8px;">
       <span style="font-size:13px; color:${speedColor};">${(elapsed/1000).toFixed(1)}초 ${speedText}</span>
     </div>
+    <div id="ask-ai-area2" style="margin-bottom:8px;">
+      <button class="btn btn-outline btn-block" style="font-size:12px;padding:8px;border-color:#a78bfa;color:#a78bfa;" id="ask-ai-btn2">이 문장 AI에게 질문하기</button>
+    </div>
     <button class="btn btn-primary btn-block" id="vs-next-btn2">다음</button>
   `;
   document.getElementById('vs-next-btn2').addEventListener('click', nextVocabQuestion);
+  document.getElementById('ask-ai-btn2').addEventListener('click', () => {
+    showAskAIPanel('ask-ai-area2', sent.zh, sent.ko);
+  });
 }
 
 function nextVocabQuestion() {
