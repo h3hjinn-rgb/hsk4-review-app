@@ -726,6 +726,23 @@ function toPinyin(chinese) {
   return '';
 }
 
+// Punctuation normalization: treat Chinese and English punctuation as equivalent
+function normalizePunct(str) {
+  return str
+    .replace(/，/g, ',')
+    .replace(/。/g, '.')
+    .replace(/？/g, '?')
+    .replace(/！/g, '!')
+    .replace(/：/g, ':')
+    .replace(/；/g, ';')
+    .replace(/\u201c/g, '"')  // "
+    .replace(/\u201d/g, '"')  // "
+    .replace(/\u2018/g, "'")  // '
+    .replace(/\u2019/g, "'")  // '
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Init pinyin toggle on load
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('pinyin-toggle').classList.toggle('on', showPinyin);
@@ -872,7 +889,7 @@ function renderTestList(filter) {
   container.innerHTML = filtered.map(s => {
     const badgeClass = s.level.includes('1-2') ? 'badge-12' : s.level.includes('3') ? 'badge-3' : 'badge-4';
     const completed = getSetCompletion(s.set);
-    return `<div class="card" onclick="startQuiz(${s.set})">
+    return `<div class="card" data-set="${s.set}">
       <div class="card-title">
         <span class="badge ${badgeClass}">${s.level}</span>
         Set ${s.set}
@@ -880,6 +897,9 @@ function renderTestList(filter) {
       <div class="card-sub">${s.questions.length} questions ${completed > 0 ? `- Best: ${completed}/10` : ''}</div>
     </div>`;
   }).join('');
+  container.querySelectorAll('.card[data-set]').forEach(card => {
+    card.addEventListener('click', () => startQuiz(parseInt(card.dataset.set)));
+  });
 }
 
 function filterTestSets(level) {
@@ -1053,7 +1073,9 @@ function showQuizResult() {
   const prev = parseInt(localStorage.getItem(bestKey) || '0');
   if (score > prev) localStorage.setItem(bestKey, score);
 
-  document.getElementById('quiz-content').innerHTML = `
+  const setNum = currentQuiz.set.set;
+  const quizContent = document.getElementById('quiz-content');
+  quizContent.innerHTML = `
     <div class="result-screen">
       <div class="result-score">${pct}%</div>
       <div class="result-detail">${score}/${total} correct</div>
@@ -1061,10 +1083,12 @@ function showQuizResult() {
         ${pct >= 80 ? '훌륭해요!' : pct >= 60 ? '잘하고 있어요!' : '더 연습해봐요!'}
       </div>
       <div class="btn-group">
-        <button class="btn btn-outline" onclick="showPage('test')">세트 목록</button>
-        <button class="btn btn-primary" onclick="startQuiz(${currentQuiz.set.set})">다시 풀기</button>
+        <button class="btn btn-outline" id="quiz-result-back">세트 목록</button>
+        <button class="btn btn-primary" id="quiz-result-retry">다시 풀기</button>
       </div>
     </div>`;
+  quizContent.querySelector('#quiz-result-back').addEventListener('click', () => showPage('test'));
+  quizContent.querySelector('#quiz-result-retry').addEventListener('click', () => startQuiz(setNum));
 }
 
 // =================== SECRET NOTES ===================
@@ -1083,11 +1107,14 @@ function renderNoteCategories() {
       const s = getSRS(`word_${w.chinese}`);
       return s.level > 0;
     }).length;
-    return `<div class="card" onclick="startNoteReview(${cat.id})">
+    return `<div class="card" data-cat-id="${cat.id}">
       <div class="card-title" style="font-size:14px;">${cat.title}</div>
       <div class="card-sub">${reviewed}/${cat.words.length} reviewed</div>
     </div>`;
   }).join('');
+  container.querySelectorAll('.card[data-cat-id]').forEach(card => {
+    card.addEventListener('click', () => startNoteReview(parseInt(card.dataset.catId)));
+  });
 }
 
 function startNoteReview(catId) {
@@ -1133,7 +1160,7 @@ function renderFlashcard() {
 
   const container = document.getElementById('fc-content');
   container.innerHTML = `
-    <div class="flashcard" onclick="flipFlashcard()">
+    <div class="flashcard" id="fc-card">
       <div><span class="srs-dot ${srsClass}"></span><span style="font-size:11px;color:var(--text2);">Lv.${srs.level}</span></div>
       <div class="chinese">${w.chinese}</div>
       ${(showPinyin || fcState.revealed) ? `<div class="pinyin">${w.pinyin}</div>` : ''}
@@ -1148,10 +1175,16 @@ function renderFlashcard() {
     </div>
     ${fcState.revealed ? `
     <div class="btn-group" style="margin-top:12px;">
-      <button class="btn btn-outline" style="border-color:var(--danger);color:var(--danger);" onclick="rateFlashcard(false)">다시</button>
-      <button class="btn btn-outline" style="border-color:var(--warning);color:var(--warning);" onclick="rateFlashcard(true)">어려움</button>
-      <button class="btn btn-success" onclick="rateFlashcard(true)">쉬움</button>
+      <button class="btn btn-outline" style="border-color:var(--danger);color:var(--danger);" id="fc-rate-again">다시</button>
+      <button class="btn btn-outline" style="border-color:var(--warning);color:var(--warning);" id="fc-rate-hard">어려움</button>
+      <button class="btn btn-success" id="fc-rate-easy">쉬움</button>
     </div>` : ''}`;
+  container.querySelector('#fc-card').addEventListener('click', flipFlashcard);
+  if (fcState.revealed) {
+    container.querySelector('#fc-rate-again').addEventListener('click', () => rateFlashcard(false));
+    container.querySelector('#fc-rate-hard').addEventListener('click', () => rateFlashcard(true));
+    container.querySelector('#fc-rate-easy').addEventListener('click', () => rateFlashcard(true));
+  }
 }
 
 function flipFlashcard() {
@@ -1170,12 +1203,14 @@ function rateFlashcard(correct) {
 }
 
 function showFlashcardComplete() {
-  document.getElementById('fc-content').innerHTML = `
+  const fcContent = document.getElementById('fc-content');
+  fcContent.innerHTML = `
     <div class="result-screen">
       <div class="result-score" style="font-size:48px;">완료!</div>
       <div class="result-detail">모든 카드 복습 완료</div>
-      <button class="btn btn-primary btn-block" onclick="showPage('notes')">카테고리로 돌아가기</button>
+      <button class="btn btn-primary btn-block" id="fc-complete-back">카테고리로 돌아가기</button>
     </div>`;
+  fcContent.querySelector('#fc-complete-back').addEventListener('click', () => showPage('notes'));
 }
 
 // =================== WORD QUIZ (Type Chinese) ===================
@@ -1259,7 +1294,7 @@ function renderWordQuiz() {
 
 function checkWordQuiz(answer) {
   const input = document.getElementById('wq-input').value.trim();
-  const correct = input === answer;
+  const correct = normalizePunct(input) === normalizePunct(answer);
   showWordQuizFeedback(correct, answer);
 }
 
@@ -1267,8 +1302,9 @@ function checkWordQuizMeaning(answer) {
   const input = document.getElementById('wq-input').value.trim();
   if (!input) { showWordQuizFeedback(false, answer); return; }
   // Match if input is at least 2 chars and matches one of the meanings
-  const meanings = answer.split(/[,，]/).map(m => m.trim());
-  const correct = input.length >= 2 && meanings.some(m => m === input || (input.length >= 2 && m.includes(input) && input.length >= m.length * 0.5));
+  const normalizedInput = normalizePunct(input);
+  const meanings = answer.split(/[,，]/).map(m => normalizePunct(m.trim()));
+  const correct = normalizedInput.length >= 2 && meanings.some(m => m === normalizedInput || (normalizedInput.length >= 2 && m.includes(normalizedInput) && normalizedInput.length >= m.length * 0.5));
   showWordQuizFeedback(correct, answer);
 }
 
@@ -1293,19 +1329,22 @@ function showWordQuizFeedback(correct, answer) {
     <div style="font-size:14px; margin-top:8px;">${w.example}</div>
     <div style="font-size:12px; color:var(--warning); margin-top:2px;">${toPinyin(w.example)}</div>
     <div style="font-size:12px; color:var(--text2);">${w.exampleKo}</div>
-    <button class="btn btn-outline btn-block" style="margin-top:12px;" onclick="wqState.current++; renderWordQuiz();">다음</button>`;
+    <button class="btn btn-outline btn-block" style="margin-top:12px;" id="wq-next-btn">다음</button>`;
+  document.getElementById('wq-next-btn').addEventListener('click', () => { wqState.current++; renderWordQuiz(); });
 }
 
 function showWordQuizResult() {
   const total = wqState.words.length;
   const score = wqState.score;
   const pct = Math.round((score / total) * 100);
-  document.getElementById('wq-content').innerHTML = `
+  const wqContent = document.getElementById('wq-content');
+  wqContent.innerHTML = `
     <div class="result-screen">
       <div class="result-score">${pct}%</div>
       <div class="result-detail">${score}/${total} correct</div>
-      <button class="btn btn-primary btn-block" onclick="showPage('notes')">돌아가기</button>
+      <button class="btn btn-primary btn-block" id="wq-result-back">돌아가기</button>
     </div>`;
+  wqContent.querySelector('#wq-result-back').addEventListener('click', () => showPage('notes'));
 }
 
 // =================== AUDIO ===================
@@ -1335,7 +1374,7 @@ function renderAudioList(level) {
   const container = document.getElementById('audio-list');
   container.innerHTML = audioState.tracks.map(t => {
     const prefix = level === '1-2' ? '1,2' : level;
-    return `<div class="card" onclick="playTrack('${level}', ${t})" style="padding:12px 16px;">
+    return `<div class="card" data-audio-level="${level}" data-audio-track="${t}" style="padding:12px 16px;">
       <div style="display:flex; align-items:center; gap:12px;">
         <div style="width:36px;height:36px;border-radius:50%;background:var(--accent2);display:flex;align-items:center;justify-content:center;">&#9654;</div>
         <div>
@@ -1345,6 +1384,9 @@ function renderAudioList(level) {
       </div>
     </div>`;
   }).join('');
+  container.querySelectorAll('.card[data-audio-track]').forEach(card => {
+    card.addEventListener('click', () => playTrack(card.dataset.audioLevel, parseInt(card.dataset.audioTrack)));
+  });
 }
 
 function formatTime(sec) {
@@ -1474,10 +1516,14 @@ function showTypingAnswer() {
   const input = document.getElementById('typing-input').value.trim();
   const correct = typingWords[currentTypingIdx % typingWords.length].chinese;
 
-  // Highlight matching characters
+  // Highlight matching characters (with punctuation normalization)
+  const normalizedInput = normalizePunct(input);
+  const normalizedCorrect = normalizePunct(correct);
   let html = '';
   for (let i = 0; i < correct.length; i++) {
-    if (input[i] === correct[i]) {
+    const normalizedInputChar = normalizePunct(input[i] || '');
+    const normalizedCorrectChar = normalizePunct(correct[i] || '');
+    if (normalizedInputChar === normalizedCorrectChar) {
       html += `<span style="color:var(--success);">${correct[i]}</span>`;
     } else {
       html += `<span style="color:var(--danger);">${correct[i]}</span>`;
@@ -1612,15 +1658,19 @@ function updateOrderDisplay() {
     });
   }
 
-  document.getElementById('order-choices').innerHTML =
+  const choicesContainer = document.getElementById('order-choices');
+  choicesContainer.innerHTML =
     orderState.remaining.map((s, i) => {
       // Only show meaning for words user hasn't learned yet
       const hint = getOrderHint(s);
-      return `<span onclick="selectOrder(${i})" style="display:inline-flex;flex-direction:column;align-items:center;padding:8px 14px;background:var(--card);border:1px solid #444;border-radius:10px;cursor:pointer;transition:all .15s;user-select:none;">
+      return `<span data-order-idx="${i}" style="display:inline-flex;flex-direction:column;align-items:center;padding:8px 14px;background:var(--card);border:1px solid #444;border-radius:10px;cursor:pointer;transition:all .15s;user-select:none;">
         <span style="font-size:18px;pointer-events:none;">${s}</span>
         ${hint ? `<span style="font-size:10px;color:var(--text2);margin-top:2px;pointer-events:none;">${hint}</span>` : ''}
       </span>`;
     }).join('');
+  choicesContainer.querySelectorAll('[data-order-idx]').forEach(span => {
+    span.addEventListener('click', () => selectOrder(parseInt(span.dataset.orderIdx)));
+  });
 }
 
 // --- Tap to swap positions ---
@@ -1889,7 +1939,7 @@ function resetOrder() {
 function checkOrder() {
   const userAnswer = orderState.selected.join('');
   const correctAnswer = orderState.answer.join('');
-  const correct = userAnswer === correctAnswer;
+  const correct = normalizePunct(userAnswer) === normalizePunct(correctAnswer);
   const q = typingWords[currentTypingIdx % typingWords.length];
   if (!correct) {
     addWrongItem('order', { sentence: q.chinese, sentenceKo: q.korean, chinese: q.word, pinyin: q.pinyin });
@@ -1912,12 +1962,13 @@ function checkOrder() {
     <div id="ask-ai-area" style="margin-top:12px;">
       <button class="btn btn-outline btn-block" style="border-color:#a78bfa;color:#a78bfa;" id="order-ask-ai-btn">AI에게 질문하기</button>
     </div>
-    <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="currentTypingIdx++; renderOrderQuestion();">다음</button>`;
+    <button class="btn btn-primary btn-block" style="margin-top:8px;" id="order-next-btn">다음</button>`;
 
   recordReview();
 
-  // Attach AI question button
-  const q = typingWords[currentTypingIdx % typingWords.length];
+  // Attach next button
+  document.getElementById('order-next-btn')?.addEventListener('click', () => { currentTypingIdx++; renderOrderQuestion(); });
+  // Attach AI question button (reuse q from above, don't redeclare)
   document.getElementById('order-ask-ai-btn')?.addEventListener('click', () => {
     showAskAIPanel('ask-ai-area', correctAnswer, q.korean);
   });
@@ -2307,7 +2358,7 @@ function updateVocabPage() {
 
     if (done) {
       const isRepeatable = sess.type === 'today_review' || sess.type === 'today_weak';
-      html += `<div class="card" style="padding:12px 16px; background: #22c55e15; border: 1px solid #22c55e33;" ${isRepeatable ? `onclick="startPlanSession(${sess.id},'${sess.type}')"` : ''}>
+      html += `<div class="card" style="padding:12px 16px; background: #22c55e15; border: 1px solid #22c55e33;" ${isRepeatable ? `data-sess-id="${sess.id}" data-sess-type="${sess.type}"` : ''}>
         <div style="display:flex; align-items:center; gap:12px;">
           <div style="font-size:24px;">${sess.icon}</div>
           <div style="flex:1;">
@@ -2318,7 +2369,7 @@ function updateVocabPage() {
         </div>
       </div>`;
     } else {
-      html += `<div class="card" style="padding:12px 16px;" onclick="startPlanSession(${sess.id},'${sess.type}')">
+      html += `<div class="card" style="padding:12px 16px;" data-sess-id="${sess.id}" data-sess-type="${sess.type}">
         <div style="display:flex; align-items:center; gap:12px;">
           <div style="font-size:24px;">${sess.icon}</div>
           <div style="flex:1;">
@@ -2331,6 +2382,9 @@ function updateVocabPage() {
     }
   }
   sessContainer.innerHTML = html;
+  sessContainer.querySelectorAll('.card[data-sess-id]').forEach(card => {
+    card.addEventListener('click', () => startPlanSession(parseInt(card.dataset.sessId), card.dataset.sessType));
+  });
 
   // Overall stats
   let mastered = 0, learning = 0, due = 0;
@@ -2607,11 +2661,13 @@ function showVocabResult() {
         </div>
       ` : ''}
       <div class="btn-group">
-        <button class="btn btn-outline" onclick="showPage('vocab'); updateVocabPage();">돌아가기</button>
-        <button class="btn btn-primary" onclick="startVocabSession()">다시 학습</button>
+        <button class="btn btn-outline" id="vs-result-back">돌아가기</button>
+        <button class="btn btn-primary" id="vs-result-retry">다시 학습</button>
       </div>
     </div>`;
 
+  content.querySelector('#vs-result-back').addEventListener('click', () => { showPage('vocab'); updateVocabPage(); });
+  content.querySelector('#vs-result-retry').addEventListener('click', () => startVocabSession());
   document.getElementById('vs-counter').textContent = '완료!';
   document.getElementById('vs-progress').style.width = '100%';
 
