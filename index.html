@@ -2615,6 +2615,31 @@ function answerVocab(el, isCorrect, wordId) {
     blank.classList.add(isCorrect ? 'filled' : 'wrong-fill');
   }
 
+  // 이합동사: highlight split characters in the full sentence + show explanation
+  if (w.pos === '이합동사' && w.chinese.length >= 2) {
+    const chars = w.chinese.replace(/[（）()\s]/g, ''); // e.g. 睡觉, 唱歌
+    const sentEl = document.querySelector('.sq-sentence');
+    if (sentEl) {
+      // Highlight each character of the 이합동사 in the sentence
+      let sentHtml = sentEl.innerHTML;
+      for (const ch of chars) {
+        sentHtml = sentHtml.replace(new RegExp(`(?<!<[^>]*)${ch}`, ''), `<span style="color:#f472b6;font-weight:700;text-decoration:underline;">${ch}</span>`);
+      }
+      sentEl.innerHTML = sentHtml;
+    }
+    // Add 이합동사 explanation below sentence
+    const koEl = document.querySelector('.sq-ko');
+    if (koEl) {
+      const c1 = chars[0], c2 = chars.slice(1);
+      koEl.innerHTML += `<div style="margin-top:8px;padding:8px;background:#f472b615;border-radius:8px;border:1px solid #f472b633;">
+        <span style="color:#f472b6;font-weight:700;">이합동사</span>
+        <span style="font-size:12px;color:var(--text2);"> ${c1}<span style="color:var(--warning);">+了/过/着/…+</span>${c2}</span>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px;">사이에 了·过·着·수량사 등이 들어갈 수 있어요</div>
+        <div style="font-size:12px;color:var(--text);margin-top:3px;">예: ${c1}<span style="color:var(--warning);">了一个</span>${c2} / ${c1}<span style="color:var(--warning);">过</span>${c2}</div>
+      </div>`;
+    }
+  }
+
   // Highlight options and reveal all meanings
   document.querySelectorAll('#mc-grid .mc-option').forEach(btn => {
     const btnId = parseInt(btn.dataset.id);
