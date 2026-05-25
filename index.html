@@ -448,7 +448,7 @@ body {
 
   <!-- Test Page -->
   <div id="page-test" class="page">
-    <button class="back-btn" onclick="showPage('home')">< 뒤로</button>
+    <button class="back-btn" onclick="showPage('home')">&lt; 뒤로</button>
     <div class="page-header">문장 테스트</div>
     <div class="setting-row" style="margin-bottom:12px;">
       <div class="setting-label">병음 힌트</div>
@@ -465,7 +465,7 @@ body {
 
   <!-- Quiz Page -->
   <div id="page-quiz" class="page">
-    <button class="back-btn" id="quiz-back-btn">< 뒤로</button>
+    <button class="back-btn" id="quiz-back-btn">&lt; 뒤로</button>
     <div class="quiz-progress">
       <span id="quiz-num">1/10</span>
       <div class="progress-bar"><div class="progress-fill" id="quiz-progress"></div></div>
@@ -476,7 +476,7 @@ body {
 
   <!-- Notes Page -->
   <div id="page-notes" class="page">
-    <button class="back-btn" onclick="showPage('home')">< 뒤로</button>
+    <button class="back-btn" onclick="showPage('home')">&lt; 뒤로</button>
     <div class="page-header">비밀노트</div>
     <div class="mode-selector">
       <div class="mode-card active" onclick="setNotesMode('flash')" id="mode-flash">
@@ -495,7 +495,7 @@ body {
 
   <!-- Flashcard Page -->
   <div id="page-flashcard" class="page">
-    <button class="back-btn" onclick="showPage('notes')">< 뒤로</button>
+    <button class="back-btn" onclick="showPage('notes')">&lt; 뒤로</button>
     <div class="quiz-progress">
       <span id="fc-num">1/10</span>
       <div class="progress-bar"><div class="progress-fill" id="fc-progress"></div></div>
@@ -505,7 +505,7 @@ body {
 
   <!-- Word Quiz Page -->
   <div id="page-wordquiz" class="page">
-    <button class="back-btn" onclick="showPage('notes')">< 뒤로</button>
+    <button class="back-btn" onclick="showPage('notes')">&lt; 뒤로</button>
     <div class="quiz-progress">
       <span id="wq-num">1/10</span>
       <div class="progress-bar"><div class="progress-fill" id="wq-progress"></div></div>
@@ -516,7 +516,7 @@ body {
 
   <!-- Audio Page -->
   <div id="page-audio" class="page">
-    <button class="back-btn" onclick="showPage('home')">< 뒤로</button>
+    <button class="back-btn" onclick="showPage('home')">&lt; 뒤로</button>
     <div class="page-header">듣기 연습</div>
     <div class="chips" id="audio-level-chips">
       <div class="chip active" data-level="1-2" onclick="filterAudio('1-2')">1-2</div>
@@ -528,7 +528,7 @@ body {
       <div class="audio-controls">
         <button onclick="playPrev()" style="width:36px;height:36px;font-size:14px;background:var(--accent2);">&#9664;&#9664;</button>
         <button onclick="togglePlay()" id="play-btn">&#9654;</button>
-        <button onclick="play다음()" style="width:36px;height:36px;font-size:14px;background:var(--accent2);">&#9654;&#9654;</button>
+        <button onclick="playNext()" style="width:36px;height:36px;font-size:14px;background:var(--accent2);">&#9654;&#9654;</button>
         <div class="audio-info">
           <div class="track-name" id="track-name">-</div>
           <div class="track-detail" id="track-detail">-</div>
@@ -539,7 +539,7 @@ body {
 
   <!-- Typing Page -->
   <div id="page-typing" class="page">
-    <button class="back-btn" onclick="showPage('home')">< 뒤로</button>
+    <button class="back-btn" onclick="showPage('home')">&lt; 뒤로</button>
     <div class="page-header">
       타이핑 연습
       <small>IBT 시험 형식 중국어 입력</small>
@@ -586,7 +586,7 @@ body {
 
   <!-- Daily Review Page -->
   <div id="page-daily" class="page">
-    <button class="back-btn" onclick="showPage('home')">< 뒤로</button>
+    <button class="back-btn" onclick="showPage('home')">&lt; 뒤로</button>
     <div class="page-header">오늘의 복습</div>
     <div id="daily-content"></div>
   </div>
@@ -642,7 +642,7 @@ body {
   <!-- Vocab Session Page (말해보카 스타일) -->
   <div id="page-vocabsession" class="page">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <button class="back-btn" onclick="confirmQuitVocab()" style="margin:0;">< 그만하기</button>
+      <button class="back-btn" onclick="confirmQuitVocab()" style="margin:0;">&lt; 그만하기</button>
       <span id="vs-counter" style="font-size:13px; color:var(--text2);">1/20</span>
     </div>
     <div class="progress-bar" style="margin-bottom:16px;"><div class="progress-fill" id="vs-progress"></div></div>
@@ -801,7 +801,8 @@ function updateHomeStats() {
   document.getElementById('stat-mastered').textContent = getMasteredCount();
   const due = getDueWords().length;
   document.getElementById('stat-review').textContent = due;
-  document.getElementById('daily-review-desc').textContent =
+  const dailyDesc = document.getElementById('daily-review-desc');
+  if (dailyDesc) dailyDesc.textContent =
     due > 0 ? `${due}개 단어 복습 필요` : '모두 완료! 추가 연습하기';
 }
 
@@ -813,7 +814,7 @@ function showPage(pageId) {
   if (!el) { document.getElementById('page-home').classList.add('active'); pageId = 'home'; }
   else el.classList.add('active');
   // Map sub-pages to parent nav items
-  const navMap = { vocabsession: 'vocab', quiz: 'test', flashcard: 'notes', wordquiz: 'notes', daily: 'home' };
+  const navMap = { vocabsession: 'vocab', quiz: 'test', flashcard: 'notes', wordquiz: 'notes', daily: 'home', typing: 'home' };
   const navPage = navMap[pageId] || pageId;
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.page === navPage);
@@ -1186,8 +1187,9 @@ function renderWordQuiz() {
           onfocus="this.style.borderColor='var(--accent)'"
           onblur="this.style.borderColor='#333'">
       </div>
-      <button class="btn btn-primary btn-block" onclick="checkWordQuiz('${w.chinese.replace(/'/g, "\\'")}')">확인</button>
+      <button class="btn btn-primary btn-block" id="wq-check-btn">확인</button>
       <div id="wq-feedback" style="display:none; margin-top:12px; padding:16px; border-radius:12px;"></div>`;
+    document.getElementById('wq-check-btn').addEventListener('click', () => checkWordQuiz(w.chinese));
   } else {
     container.innerHTML = `
       <div style="text-align:center; padding:24px;">
@@ -1203,8 +1205,9 @@ function renderWordQuiz() {
           onfocus="this.style.borderColor='var(--accent)'"
           onblur="this.style.borderColor='#333'">
       </div>
-      <button class="btn btn-primary btn-block" onclick="checkWordQuizMeaning('${w.meaning.replace(/'/g, "\\'")}')">확인</button>
+      <button class="btn btn-primary btn-block" id="wq-check-btn">확인</button>
       <div id="wq-feedback" style="display:none; margin-top:12px; padding:16px; border-radius:12px;"></div>`;
+    document.getElementById('wq-check-btn').addEventListener('click', () => checkWordQuizMeaning(w.meaning));
   }
 
   setTimeout(() => {
@@ -1664,11 +1667,11 @@ const PLAN = [
 
 // 5 sessions per day
 const SESSIONS = [
-  { id: 1, icon: '🌅', name: '출근 1', desc: '새 단어 학습', time: '출근길', type: 'new' },
-  { id: 2, icon: '🚇', name: '출근 2', desc: '새 단어 학습', time: '출근길', type: 'new' },
-  { id: 3, icon: '☀️', name: '출근 3', desc: '새 단어 + 복습', time: '출근길', type: 'mixed' },
-  { id: 4, icon: '🌆', name: '퇴근', desc: '오전 복습', time: '퇴근길', type: 'review' },
-  { id: 5, icon: '🌙', name: '자기 전', desc: '오늘 틀린 것 마무리', time: '자기 전', type: 'review' },
+  { id: 1, icon: '🌅', name: '출근 1', desc: '새 단어 학습', time: '출근길', type: 'new', size: 50 },
+  { id: 2, icon: '🚇', name: '출근 2', desc: '새 단어 학습', time: '출근길', type: 'new', size: 50 },
+  { id: 3, icon: '☀️', name: '출근 3', desc: '새 단어 학습', time: '출근길', type: 'new', size: 50 },
+  { id: 4, icon: '🌆', name: '퇴근', desc: '오늘 배운 단어 복습', time: '퇴근길', type: 'today_review', size: 30 },
+  { id: 5, icon: '🌙', name: '자기 전', desc: '틀렸거나 느린 단어 복습', time: '자기 전', type: 'today_weak', size: 30 },
 ];
 
 function getPlanState() {
@@ -1814,15 +1817,14 @@ function updateVocabPage() {
     let sessDesc = sess.desc;
     if (!done) {
       if (sess.type === 'new') {
-        const n = Math.min(getNewVocabWords(todayWords).length, 20);
-        sessDesc = n > 0 ? `처음 보는 단어 ${n}개 학습` : '새 단어 완료! 복습 단어로 진행';
-      } else if (sess.type === 'review') {
-        const d = getDueVocabWords(hskWords).length;
-        sessDesc = d > 0 ? `외웠던 단어 ${Math.min(d, 20)}개 복습` : '복습할 단어 없음';
-      } else {
-        const n = Math.min(getNewVocabWords(todayWords).length, 10);
-        const d = Math.min(getDueVocabWords(todayWords).length, 10);
-        sessDesc = `새 단어 ${n}개 + 복습 단어 ${d}개`;
+        const n = Math.min(getNewVocabWords(todayWords).length, sess.size);
+        sessDesc = n > 0 ? `처음 보는 단어 ${n}개 학습` : '새 단어 완료! 복습으로 진행';
+      } else if (sess.type === 'today_review') {
+        const learned = getTodayLearnedWords().length;
+        sessDesc = learned > 0 ? `오늘 배운 ${learned}개 중 ${Math.min(learned, sess.size)}개 재시험` : '아직 학습한 단어 없음';
+      } else if (sess.type === 'today_weak') {
+        const weak = getTodayWeakWords().length;
+        sessDesc = weak > 0 ? `틀렸거나 느린 단어 ${Math.min(weak, sess.size)}개 복습` : '복습할 단어 없음';
       }
     }
 
@@ -1879,32 +1881,58 @@ function updateVocabPage() {
 
 function filterVocab() {} // no longer needed but keep for compatibility
 
+// Get today's words that have been learned (at least 1 correct)
+function getTodayLearnedWords() {
+  return getTodayWords().filter(w => {
+    const s = getVocabSRS(w.id);
+    return s.correct > 0 || s.wrong > 0;
+  });
+}
+
+// Get today's words that were wrong or slow (avgTime > 5s)
+function getTodayWeakWords() {
+  return getTodayWords().filter(w => {
+    const s = getVocabSRS(w.id);
+    if (s.wrong > 0 && s.level < 3) return true; // has wrong answers
+    if (s.avgTime > 5000 && s.level < 5) return true; // slow
+    if (s.level === 0 && (s.correct > 0 || s.wrong > 0)) return true; // reset to 0
+    return false;
+  });
+}
+
 // --- Plan Session ---
 function startPlanSession(sessionId, type) {
   const todayWords = getTodayWords();
+  const sess = SESSIONS.find(s => s.id === sessionId);
+  const size = sess ? sess.size : 30;
   let queue = [];
 
   if (type === 'new') {
-    // New words first, fill with review
-    const newW = getNewVocabWords(todayWords).slice(0, 20);
+    // New words from today's plan
+    const newW = getNewVocabWords(todayWords).slice(0, size);
     queue.push(...newW);
-    if (queue.length < 20) {
-      const dueW = getDueVocabWords(todayWords).slice(0, 20 - queue.length);
-      queue.push(...dueW);
+    // If no new words left, fall back to review today's words
+    if (queue.length === 0) {
+      const learned = getTodayLearnedWords().sort(() => Math.random() - 0.5);
+      queue.push(...learned.slice(0, size));
     }
-  } else if (type === 'review') {
-    // Review from ALL words (not just today's), prioritize due
-    const allDue = getDueVocabWords(hskWords).sort((a, b) => getVocabSRS(a.id).nextReview - getVocabSRS(b.id).nextReview);
-    queue.push(...allDue.slice(0, 20));
-    // If not enough, add today's new
+  } else if (type === 'today_review') {
+    // Re-quiz words learned today (random selection)
+    const learned = getTodayLearnedWords().sort(() => Math.random() - 0.5);
+    queue.push(...learned.slice(0, size));
+  } else if (type === 'today_weak') {
+    // Weak words: wrong or slow from today
+    const weak = getTodayWeakWords().sort(() => Math.random() - 0.5);
+    queue.push(...weak.slice(0, size));
+    // If not enough weak, add random from today
     if (queue.length < 10) {
-      const newW = getNewVocabWords(todayWords).slice(0, 20 - queue.length);
-      queue.push(...newW);
+      const learned = getTodayLearnedWords().filter(w => !queue.find(q => q.id === w.id)).sort(() => Math.random() - 0.5);
+      queue.push(...learned.slice(0, size - queue.length));
     }
   } else {
-    // Mixed: half new, half review
-    const newW = getNewVocabWords(todayWords).slice(0, 10);
-    const dueW = getDueVocabWords(todayWords).slice(0, 10);
+    // Mixed fallback
+    const newW = getNewVocabWords(todayWords).slice(0, Math.floor(size / 2));
+    const dueW = getDueVocabWords(todayWords).slice(0, Math.floor(size / 2));
     queue.push(...dueW, ...newW);
   }
 
@@ -1913,7 +1941,7 @@ function startPlanSession(sessionId, type) {
     return;
   }
 
-  // Shuffle within groups
+  // Shuffle
   queue.sort(() => Math.random() - 0.5);
 
   vsState = {
