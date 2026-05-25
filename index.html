@@ -1754,73 +1754,107 @@ function buildSentenceAnalysis(segments, fullSentence) {
 
 // Classify sentence pattern (HSK grammar types)
 function classifySentencePattern(segments, analysis) {
-  const text = segments.join('');
   const segs = segments;
   const hasWord = (w) => segs.includes(w);
   const roles = analysis.map(a => a.role);
 
-  // 把字句
+  // Collect all patterns that match (can be multiple)
+  const patterns = [];
+
+  // === 1. 확실한 구문 표지 (키워드 기반) ===
+
+  // 把자문: 把 + noun + verb (把 뒤에 명사/대명사, 그 뒤에 동사)
   if (hasWord('把')) {
-    return { name: '把자문 (把字句)', desc: '목적어를 동사 앞으로 이동시켜 처치·처리를 강조', structure: '주어 + 把 + 목적어 + 동사 + 보어/결과' };
-  }
-  // 被字句
-  if (hasWord('被')) {
-    return { name: '피동문 (被字句)', desc: '주어가 동작을 당하는 피동 표현', structure: '주어(받는 자) + 被 + (행위자) + 동사' };
-  }
-  // 比字句
-  if (hasWord('比')) {
-    return { name: '비교문 (比字句)', desc: '두 대상을 비교하는 표현', structure: 'A + 比 + B + 형용사/동사' };
-  }
-  // 是...的 구문
-  if (hasWord('是') && hasWord('的')) {
-    return { name: '是...的 강조구문', desc: '이미 발생한 사실의 시간·장소·방식 등을 강조', structure: '주어 + 是 + (강조 내용) + 동사 + 的' };
-  }
-  // 연동문 (连动句) - two verbs in sequence
-  const verbIndices = [];
-  analysis.forEach((a, i) => { if (a.role === '서술어') verbIndices.push(i); });
-  if (verbIndices.length >= 2) {
-    // Check if second verb has no subject between them
-    const between = analysis.slice(verbIndices[0] + 1, verbIndices[1]);
-    const hasSubjBetween = between.some(a => a.role === '주어');
-    if (!hasSubjBetween && !hasWord('让') && !hasWord('请') && !hasWord('叫') && !hasWord('使')) {
-      return { name: '연동문 (连动句)', desc: '하나의 주어가 두 개의 동작을 순서대로 수행', structure: '주어 + 동사① + (목적어) + 동사② + (목적어)' };
+    const baIdx = segs.indexOf('把');
+    const afterBa = analysis.slice(baIdx + 1);
+    const hasNounThenVerb = afterBa.some(a => ['주어','목적어'].includes(a.role)) && afterBa.some(a => a.role === '서술어' || a.role === '결과보어');
+    if (hasNounThenVerb) {
+      patterns.push({ name: '把자문 (把字句)', desc: '목적어를 동사 앞으로 이동시켜 처치·처리를 강조', structure: '주어 + 把 + 목적어 + 동사 + 보어/결과' });
     }
   }
-  // 겸어문 (兼语句) - 让/请/叫/使 + person + verb
-  if (hasWord('让') || hasWord('请') || hasWord('叫') || hasWord('使')) {
-    return { name: '겸어문 (兼语句)', desc: '첫 번째 동사의 목적어가 두 번째 동사의 주어 역할', structure: '주어 + 让/请/叫 + 사람 + 동사' };
+  // 被자문
+  if (hasWord('被')) {
+    patterns.push({ name: '피동문 (被字句)', desc: '주어가 동작을 당하는 피동 표현', structure: '주어(받는 자) + 被 + (행위자) + 동사' });
   }
-  // 존현문
-  if (hasWord('有') && roles[0] !== '주어') {
-    return { name: '존현문 (存现句)', desc: '어떤 장소에 사물이 존재·출현·소실함을 표현', structure: '장소 + 有/동사 + 사물' };
+  // 비교문
+  if (hasWord('比')) {
+    patterns.push({ name: '비교문 (比字句)', desc: '두 대상을 비교하는 표현', structure: 'A + 比 + B + 형용사' });
   }
+  // 겸어문: 让/请/叫/使 + person + verb
+  const jianyuWords = ['让','请','叫','使'];
+  if (jianyuWords.some(w => hasWord(w))) {
+    const triggerIdx = segs.findIndex(s => jianyuWords.includes(s));
+    const after = analysis.slice(triggerIdx + 1);
+    if (after.some(a => a.role === '서술어')) {
+      patterns.push({ name: '겸어문 (兼语句)', desc: '첫 번째 동사의 목적어가 두 번째 동사의 주어', structure: '주어 + 让/请/叫 + 사람 + 동사' });
+    }
+  }
+  // 是...的 강조구문
+  if (hasWord('是') && hasWord('的') && segs.indexOf('是') < segs.indexOf('的')) {
+    patterns.push({ name: '是...的 강조구문', desc: '이미 발생한 사실의 시간·장소·방식 등을 강조', structure: '주어 + 是 + (강조 내용) + 동사 + 的' });
+  }
+
+  // === 2. 보어 구문 (구조 기반) ===
+
   // 정도보어 (得 구문)
-  if (hasWord('得') && analysis.some(a => a.role === '정도보어 조사')) {
-    return { name: '정도보어 구문', desc: '동작의 정도나 결과를 보충 설명', structure: '동사 + 得 + (정도/상태)' };
+  if (hasWord('得') && roles.some(r => r === '정도보어 조사')) {
+    patterns.push({ name: '정도보어 (程度补语)', desc: '동작의 정도/상태를 보충 설명', structure: '동사 + 得 + 형용사/상태' });
   }
   // 결과보어
   if (roles.includes('결과보어')) {
-    return { name: '결과보어 구문', desc: '동사 뒤에 동작의 결과를 보충 (看见, 听懂, 做完 등)', structure: '동사 + 결과보어' };
+    patterns.push({ name: '결과보어 (结果补语)', desc: '동사 뒤에 동작의 결과를 보충 (看见, 听懂, 做完 등)', structure: '동사 + 결과동사(见/懂/完/到 등)' });
   }
-  // 시량보어/동량보어 - number + 양사 after verb
+  // 동량보어 / 시량보어
   const qIdx = roles.indexOf('양사구');
   if (qIdx > 0 && analysis.slice(0, qIdx).some(a => a.role === '서술어')) {
-    const qWord = analysis[qIdx];
-    if (['次','遍','回','趟','下'].some(w => qWord.seg.includes(w) || segs.some(s => s === w))) {
-      return { name: '동량보어 구문', desc: '동작의 횟수를 나타냄', structure: '동사 + 숫자 + 동량사(次/遍/回)' };
+    const qSeg = analysis[qIdx].seg;
+    if (['次','遍','回','趟'].some(w => qSeg.includes(w) || segs.includes(w))) {
+      patterns.push({ name: '동량보어 (动量补语)', desc: '동작의 횟수를 나타냄', structure: '동사 + 숫자 + 동량사(次/遍/回)' });
+    } else {
+      patterns.push({ name: '시량보어 (时量补语)', desc: '동작의 지속 시간을 나타냄', structure: '동사 + 시간 길이(两个小时 등)' });
     }
-    return { name: '시량보어 구문', desc: '동작의 지속 시간을 나타냄', structure: '동사 + 시간 길이' };
   }
-  // 전치사구 (在/从/对/向/给 등)
+
+  // === 3. 구조 기반 판별 (키워드 없이) ===
+
+  // 존현문
+  if (hasWord('有') && analysis.length > 0 && !['주어','부사어'].includes(analysis[0]?.role)) {
+    patterns.push({ name: '존현문 (存现句)', desc: '어떤 장소에 사물이 존재·출현·소실함을 표현', structure: '장소 + 有/동사 + 사물' });
+  }
+  // 전치사구 구문
   if (roles.includes('전치사구')) {
-    return { name: '전치사구 구문', desc: '전치사가 장소·대상·방향 등을 나타냄 (동사 앞에 위치)', structure: '주어 + 전치사구 + 동사 + 목적어' };
+    const prepWord = segs.find(s => ['在','从','对','向','给','跟','往','为'].includes(s));
+    if (prepWord) {
+      const prepNames = {'在':'장소','从':'출발점','对':'대상','向':'방향','给':'수혜자','跟':'동반','往':'방향','为':'목적'};
+      patterns.push({ name: '전치사구 구문', desc: `"${prepWord}"가 ${prepNames[prepWord] || '대상'}을 나타냄 (동사 앞에 위치)`, structure: `주어 + ${prepWord} + 대상 + 동사` });
+    }
   }
   // 조동사 구문
   if (roles.includes('조동사')) {
-    return { name: '조동사 구문', desc: '능력·의무·가능성 등을 나타냄 (会/能/可以/想/要/应该)', structure: '주어 + 조동사 + 동사 + 목적어' };
+    const auxWord = segs.find(s => ['会','能','可以','想','要','应该','必须','可能','需要','愿意','敢'].includes(s));
+    if (auxWord) {
+      const auxDesc = {'会':'능력/가능','能':'능력/허가','可以':'허가/가능','想':'희망','要':'의지/필요','应该':'당위','必须':'필수','可能':'추측','需要':'필요','愿意':'의원','敢':'용감'};
+      patterns.push({ name: '조동사 구문', desc: `"${auxWord}" = ${auxDesc[auxWord] || '조동사'} (동사 앞에서 의미 보충)`, structure: `주어 + ${auxWord} + 동사 + 목적어` });
+    }
   }
 
-  return null;
+  // 연동문: 매우 엄격하게 - 두 동사 사이에 목적어가 있어야 함
+  // 예: 去商店买东西 (去+목적어+买+목적어)
+  const verbPositions = [];
+  analysis.forEach((a, i) => { if (a.role === '서술어') verbPositions.push(i); });
+  if (verbPositions.length >= 2 && patterns.length === 0) {
+    // 두 서술어 사이에 목적어가 있고, 겸어문/把/被가 아닌 경우만
+    const v1 = verbPositions[0], v2 = verbPositions[1];
+    const between = analysis.slice(v1 + 1, v2);
+    const hasObjBetween = between.some(a => a.role === '목적어');
+    const notAdjacent = v2 - v1 > 1; // 인접하면 결과보어일 가능성
+    if (hasObjBetween && notAdjacent) {
+      patterns.push({ name: '연동문 (连动句)', desc: '하나의 주어가 두 동작을 순서대로 수행 (앞 동작이 뒷 동작의 목적/방식)', structure: '주어 + 동사① + 목적어 + 동사② + 목적어' });
+    }
+  }
+
+  // Return first (most important) pattern, or null
+  return patterns.length > 0 ? patterns[0] : null;
 }
 
 // Determine detailed grammar role of a word in context
