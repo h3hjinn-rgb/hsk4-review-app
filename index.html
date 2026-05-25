@@ -1543,10 +1543,8 @@ function updateOrderDisplay() {
     selContainer.innerHTML = '<span style="color:#555;">아래 단어를 탭하여 배열하세요</span>';
   } else {
     selContainer.innerHTML = orderState.selected.map((s, i) => {
-      const info = lookupChineseWord(s);
       return `<span class="order-chip" data-idx="${i}" style="display:inline-flex;flex-direction:column;align-items:center;padding:6px 12px;margin:3px;background:var(--accent2);border-radius:8px;cursor:grab;user-select:none;touch-action:none;transition:transform .15s,opacity .15s;">
         <span style="font-size:18px;pointer-events:none;">${s}</span>
-        ${info ? `<span style="font-size:9px;color:#aaa;pointer-events:none;">${info}</span>` : ''}
       </span>`;
     }).join('');
 
@@ -1564,10 +1562,11 @@ function updateOrderDisplay() {
 
   document.getElementById('order-choices').innerHTML =
     orderState.remaining.map((s, i) => {
-      const info = lookupChineseWord(s);
+      // Only show meaning for words user hasn't learned yet
+      const hint = getOrderHint(s);
       return `<span onclick="selectOrder(${i})" style="display:inline-flex;flex-direction:column;align-items:center;padding:8px 14px;background:var(--card);border:1px solid #444;border-radius:10px;cursor:pointer;transition:all .15s;user-select:none;">
         <span style="font-size:18px;pointer-events:none;">${s}</span>
-        ${info ? `<span style="font-size:10px;color:var(--text2);margin-top:2px;pointer-events:none;">${info}</span>` : ''}
+        ${hint ? `<span style="font-size:10px;color:var(--text2);margin-top:2px;pointer-events:none;">${hint}</span>` : ''}
       </span>`;
     }).join('');
 }
@@ -1637,83 +1636,132 @@ function handleDragStart(e) {
 
 // Build sentence structure analysis for word order quiz
 function buildSentenceAnalysis(segments, fullSentence) {
-  // Map each segment to its word info
   const analysis = segments.map(seg => {
     if (!seg || /^[。？！，、；：""''（）]+$/.test(seg)) return null;
     const w = hskWords.find(x => x.chinese === seg);
     if (w) {
-      // Determine grammatical role based on pos
-      let role = '';
-      const pos = w.pos;
-      if (['명사', '고유명사'].includes(pos)) role = '명사';
-      else if (pos === '동사' || pos === '이합동사') role = '동사';
-      else if (pos === '형용사') role = '형용사';
-      else if (pos === '부사') role = '부사';
-      else if (pos === '전치사') role = '전치사';
-      else if (pos === '접속사') role = '접속사';
-      else if (pos === '조사') role = '조사';
-      else if (pos === '조동사') role = '조동사';
-      else if (pos === '양사') role = '양사';
-      else if (pos === '수사') role = '수사';
-      else if (pos === '대명사') role = '대명사';
-      else role = pos || '';
-      return { seg, chinese: w.chinese, pinyin: w.pinyin, meaning: w.meaning, role };
+      return { seg, pinyin: w.pinyin, meaning: w.meaning, pos: w.pos || '', role: getGrammarRole(w, seg, segments) };
     }
-    // Try partial match for compound segments
     let found = null;
     for (const cw of hskWords) {
-      if (seg.includes(cw.chinese) && cw.chinese.length >= 2) {
-        found = cw; break;
-      }
+      if (seg.includes(cw.chinese) && cw.chinese.length >= 2) { found = cw; break; }
     }
-    if (found) return { seg, chinese: found.chinese, pinyin: found.pinyin, meaning: found.meaning, role: found.pos || '' };
-    return { seg, chinese: seg, pinyin: toPinyin(seg), meaning: '', role: '' };
+    if (found) return { seg, pinyin: found.pinyin, meaning: found.meaning, pos: found.pos || '', role: getGrammarRole(found, seg, segments) };
+    return { seg, pinyin: toPinyin(seg), meaning: '', pos: '', role: '' };
   }).filter(Boolean);
 
-  if (analysis.length === 0) return '<div style="font-size:13px; color:var(--text2);">해설 없음</div>';
+  if (analysis.length === 0) return '';
 
-  // Role colors
   const roleColors = {
-    '명사': '#60a5fa', '대명사': '#60a5fa',
-    '동사': '#f87171', '이합동사': '#f87171',
-    '형용사': '#4ade80', '부사': '#a78bfa',
-    '전치사': '#fbbf24', '조동사': '#fb923c',
-    '접속사': '#94a3b8', '조사': '#94a3b8',
-    '양사': '#2dd4bf', '수사': '#2dd4bf',
+    '주어': '#60a5fa', '목적어': '#38bdf8',
+    '서술어': '#f87171', '보어': '#fb7185',
+    '관형어': '#4ade80', '부사어': '#a78bfa',
+    '전치사구': '#fbbf24', '조동사': '#fb923c',
+    '접속사': '#94a3b8', '어기조사': '#94a3b8',
+    '결과보어': '#f472b6', '방향보어': '#f472b6',
+    '시간명사': '#2dd4bf', '양사구': '#2dd4bf',
   };
 
-  let html = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">';
+  let html = '<div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px;">';
   for (const a of analysis) {
     const color = roleColors[a.role] || '#aaa';
-    html += `<div style="text-align:center;">
+    html += `<div style="text-align:center; padding:4px 6px; background:${color}15; border-radius:6px; border:1px solid ${color}33;">
       <div style="font-size:16px; font-weight:600;">${a.seg}</div>
       <div style="font-size:10px; color:var(--warning);">${a.pinyin || ''}</div>
-      <div style="font-size:10px; color:${color}; font-weight:600;">${a.role}</div>
-      <div style="font-size:10px; color:var(--text2); max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${a.meaning.split(',')[0] || ''}</div>
+      <div style="font-size:10px; color:${color}; font-weight:700;">${a.role}</div>
+      <div style="font-size:10px; color:var(--text2); max-width:80px;">${a.meaning.split(',')[0].split('，')[0] || ''}</div>
     </div>`;
   }
   html += '</div>';
 
-  // Add basic structure explanation
-  const hasSubj = analysis.some(a => ['명사', '대명사'].includes(a.role));
-  const hasVerb = analysis.some(a => ['동사', '이합동사'].includes(a.role));
-  const hasObj = analysis.filter(a => ['명사', '대명사'].includes(a.role)).length > 1;
-  const hasAdv = analysis.some(a => a.role === '부사');
-  const hasPrep = analysis.some(a => a.role === '전치사');
-
-  let structure = '구조: ';
-  const parts = [];
-  if (hasSubj) parts.push('<span style="color:#60a5fa;">주어</span>');
-  if (hasAdv) parts.push('<span style="color:#a78bfa;">부사</span>');
-  if (hasPrep) parts.push('<span style="color:#fbbf24;">전치사구</span>');
-  if (hasVerb) parts.push('<span style="color:#f87171;">동사</span>');
-  if (hasObj) parts.push('<span style="color:#60a5fa;">목적어</span>');
-  structure += parts.join(' + ');
-
-  html += `<div style="font-size:11px; color:var(--text2); margin-top:4px;">${structure}</div>`;
-  html += `<div style="font-size:11px; color:var(--text2); margin-top:2px;">중국어 기본 어순: 주어 + (시간/부사) + 동사 + 목적어</div>`;
+  // Build structure string from actual roles
+  const roles = analysis.map(a => a.role).filter(r => r);
+  const uniqueRoles = [];
+  for (const r of roles) { if (!uniqueRoles.includes(r)) uniqueRoles.push(r); }
+  html += `<div style="font-size:11px; color:var(--text2);">문장 성분: ${uniqueRoles.map(r => `<span style="color:${roleColors[r] || '#aaa'};">${r}</span>`).join(' → ')}</div>`;
+  html += `<div style="font-size:11px; color:var(--text2); margin-top:3px;">TIP: 중국어 어순 = 주어 + 부사어/전치사구 + 서술어(동사) + 보어 + 목적어</div>`;
 
   return html;
+}
+
+// Determine detailed grammar role of a word in context
+function getGrammarRole(word, seg, allSegments) {
+  const pos = word.pos || '';
+  const idx = allSegments.indexOf(seg);
+  const total = allSegments.length;
+
+  // 조사/어기조사 (了, 吗, 呢, 的, 得, 地, 着, 过, 吧)
+  const particles = {'了':'어기조사','吗':'어기조사','呢':'어기조사','吧':'어기조사','的':'관형어 조사','得':'정도보어 조사','地':'부사어 조사','着':'진행 조사','过':'경험 조사'};
+  if (particles[seg]) return particles[seg];
+
+  // 조동사 (会, 能, 可以, 想, 要, 应该, 必须, etc.)
+  if (pos === '조동사') return '조동사';
+
+  // 전치사 (在, 从, 对, 给, 向, 把, 被, 比, etc.)
+  if (pos === '전치사') return '전치사구';
+
+  // 접속사
+  if (pos === '접속사') return '접속사';
+
+  // 부사
+  if (pos === '부사') return '부사어';
+
+  // 수사/양사
+  if (pos === '수사' || pos === '양사') return '양사구';
+
+  // 형용사 - can be predicate or modifier
+  if (pos === '형용사') {
+    // If at end or before 了, it's predicate
+    if (idx >= total - 2) return '서술어';
+    // If before a noun, it's modifier
+    const nextSeg = allSegments[idx + 1];
+    const nextW = nextSeg ? hskWords.find(x => x.chinese === nextSeg) : null;
+    if (nextW && (nextW.pos === '명사' || nextW.pos === '고유명사')) return '관형어';
+    return '서술어';
+  }
+
+  // 동사/이합동사
+  if (pos === '동사' || pos === '이합동사') {
+    // Check if this is a resultative complement (verb after another verb)
+    if (idx > 0) {
+      const prevSeg = allSegments[idx - 1];
+      const prevW = prevSeg ? hskWords.find(x => x.chinese === prevSeg) : null;
+      if (prevW && (prevW.pos === '동사' || prevW.pos === '이합동사')) return '결과보어';
+    }
+    return '서술어';
+  }
+
+  // 명사/대명사/고유명사
+  if (['명사', '대명사', '고유명사'].includes(pos)) {
+    // First noun is likely subject, later ones are objects
+    let nounCount = 0;
+    for (let j = 0; j <= idx; j++) {
+      const sw = hskWords.find(x => x.chinese === allSegments[j]);
+      if (sw && ['명사', '대명사', '고유명사'].includes(sw.pos)) nounCount++;
+    }
+    // Check if there's a verb before this noun
+    let verbBefore = false;
+    for (let j = 0; j < idx; j++) {
+      const sw = hskWords.find(x => x.chinese === allSegments[j]);
+      if (sw && (sw.pos === '동사' || sw.pos === '이합동사')) verbBefore = true;
+    }
+    if (!verbBefore) return '주어';
+    return '목적어';
+  }
+
+  return pos || '';
+}
+
+// Show hint only for words user hasn't learned yet (SRS level 0, never seen)
+function getOrderHint(text) {
+  if (!hskWords || hskWords.length === 0) return '';
+  const w = hskWords.find(x => x.chinese === text);
+  if (!w) return '';
+  const s = getVocabSRS(w.id);
+  // Already learned (seen at least once) → hide meaning
+  if (s.correct > 0 || s.wrong > 0) return '';
+  // New word → show meaning as hint
+  return w.meaning.split(',')[0].split('，')[0].trim();
 }
 
 // Lookup Chinese word/segment meaning from hskWords
