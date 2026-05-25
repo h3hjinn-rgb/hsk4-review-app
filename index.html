@@ -1990,18 +1990,19 @@ function showAskAIPanel(containerId, sentence, korean) {
     <div style="background:var(--card); border-radius:12px; padding:12px; border:1px solid #a78bfa33;">
       <div style="font-size:12px; color:#a78bfa; font-weight:600; margin-bottom:8px;">무엇이 궁금한가요?</div>
       <textarea id="ask-ai-input" placeholder="예: 왜 把를 여기서 쓰나요? / 이 문장은 무슨 문형인가요?" style="width:100%;padding:10px;font-size:14px;background:var(--bg);border:1px solid #333;border-radius:8px;color:var(--text);outline:none;resize:none;min-height:60px;"></textarea>
-      <div class="btn-group" style="margin-top:8px;">
-        <button class="btn btn-outline" style="flex:1;font-size:13px;border-color:#10a37f;color:#10a37f;" id="ask-gpt-btn">ChatGPT</button>
-        <button class="btn btn-outline" style="flex:1;font-size:13px;border-color:#a78bfa;color:#a78bfa;" id="ask-claude-btn">Claude</button>
+      <div style="margin-top:8px;">
+        <a id="ask-gpt-link" href="https://chatgpt.com/" target="_blank" rel="noopener" style="display:block;text-align:center;padding:12px;background:#10a37f;color:white;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;">클립보드 복사 + ChatGPT 열기</a>
       </div>
-      <div style="font-size:10px; color:var(--text2); margin-top:6px; text-align:center;">문장+질문이 클립보드에 복사되고 AI가 열립니다</div>
+      <div style="font-size:10px; color:var(--text2); margin-top:6px; text-align:center;">질문이 복사됩니다 - ChatGPT에서 붙여넣기하세요</div>
     </div>`;
-  document.getElementById('ask-gpt-btn').addEventListener('click', () => askAI('chatgpt'));
-  document.getElementById('ask-claude-btn').addEventListener('click', () => askAI('claude'));
+  document.getElementById('ask-gpt-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    askAI();
+  });
   setTimeout(() => document.getElementById('ask-ai-input')?.focus(), 100);
 }
 
-function askAI(service) {
+function askAI() {
   const sentence = _askSentence;
   const korean = _askKorean;
   const question = document.getElementById('ask-ai-input')?.value?.trim() || '이 문장의 문법 구조를 자세히 설명해주세요';
@@ -2017,24 +2018,28 @@ HSK 4급 수준으로 쉽게 설명해주세요. 문장 성분(주어/서술어/
 
   // Copy to clipboard
   navigator.clipboard.writeText(prompt).then(() => {
-    toast('질문이 클립보드에 복사됐어요!');
+    toast('클립보드에 복사 완료! ChatGPT에서 붙여넣기하세요');
   }).catch(() => {
-    // Fallback for older browsers
     const ta = document.createElement('textarea');
     ta.value = prompt;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
     document.body.appendChild(ta);
     ta.select();
     document.execCommand('copy');
     document.body.removeChild(ta);
-    toast('질문이 클립보드에 복사됐어요!');
+    toast('클립보드에 복사 완료! ChatGPT에서 붙여넣기하세요');
   });
 
-  // Open AI service
-  const urls = {
-    chatgpt: 'https://chat.openai.com/',
-    claude: 'https://claude.ai/new'
-  };
-  setTimeout(() => window.open(urls[service], '_blank'), 300);
+  // Open ChatGPT app via <a> tag click (triggers Universal Links / App Links)
+  setTimeout(() => {
+    const a = document.createElement('a');
+    a.href = 'https://chatgpt.com/';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, 500);
 }
 
 // =================== WRONG ITEMS TRACKER ===================
