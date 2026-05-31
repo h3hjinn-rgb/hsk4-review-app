@@ -403,9 +403,20 @@ body {
 
   <!-- Home Page -->
   <div id="page-home" class="page active">
-    <div class="page-header">
-      HSK 4급 복습
-      <small>IBT 시험 대비 - 출퇴근길 복습용</small>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div class="page-header" style="margin-bottom:8px;">
+        HSK 4급 복습
+        <small>IBT 시험 대비 - 출퇴근길 복습용</small>
+      </div>
+      <button id="dday-btn" style="background:var(--accent); color:white; border:none; border-radius:10px; padding:6px 12px; font-size:13px; font-weight:700; cursor:pointer; margin-top:8px; white-space:nowrap;" onclick="promptExamDate()">
+        D-?
+      </button>
+    </div>
+
+    <!-- Today's summary -->
+    <div id="home-today-summary" style="background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; border:1px solid #333;">
+      <div style="font-size:12px; color:var(--text2); margin-bottom:8px;">오늘의 학습</div>
+      <div style="display:flex; gap:8px;" id="home-todo-items"></div>
     </div>
 
     <div class="stat-grid">
@@ -428,8 +439,22 @@ body {
     </div>
 
     <div class="card" onclick="showPage('vocab')" style="background: linear-gradient(135deg, #0f3460, #533483);">
-      <div class="card-title" style="font-size: 18px;">단어 학습</div>
-      <div class="card-sub" style="color: #ddd;" id="home-vocab-desc">14일 플랜 - 예문 빈칸 채우기</div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div class="card-title" style="font-size: 18px;">단어 학습</div>
+          <div class="card-sub" style="color: #ddd;" id="home-vocab-desc">14일 플랜 - 예문 빈칸 채우기</div>
+        </div>
+        <div style="font-size:12px; color:#aaa;" id="home-vocab-progress"></div>
+      </div>
+    </div>
+    <div class="card" onclick="showPage('test')">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div class="card-title">문장 테스트</div>
+          <div class="card-sub">38세트 - 빈칸에 중국어 채우기</div>
+        </div>
+        <div style="font-size:12px; color:var(--text2);" id="home-quest-status"></div>
+      </div>
     </div>
     <div class="card" onclick="showPage('audio')">
       <div class="card-title">듣기 연습</div>
@@ -438,10 +463,6 @@ body {
     <div class="card" onclick="showPage('typing')">
       <div class="card-title">타이핑 연습</div>
       <div class="card-sub">IBT 대비 중국어 입력 · 어순 배열</div>
-    </div>
-    <div class="card" onclick="showPage('test')">
-      <div class="card-title">문장 테스트</div>
-      <div class="card-sub">38세트 - 빈칸에 중국어 채우기</div>
     </div>
     <div class="card" onclick="showPage('notes')">
       <div class="card-title">비밀노트</div>
@@ -866,15 +887,95 @@ function getMasteredCount() {
   return count;
 }
 
+// =================== EXAM D-DAY ===================
+function getExamDate() { return localStorage.getItem('hsk4_exam_date') || ''; }
+function setExamDate(dateStr) { localStorage.setItem('hsk4_exam_date', dateStr); }
+
+function promptExamDate() {
+  const current = getExamDate();
+  const input = prompt('시험 날짜를 입력하세요 (예: 2026-07-12)', current || '2026-07-12');
+  if (input && /^\d{4}-\d{2}-\d{2}$/.test(input.trim())) {
+    setExamDate(input.trim());
+    updateDday();
+    toast('시험 날짜가 설정되었습니다');
+  } else if (input !== null) {
+    toast('형식: YYYY-MM-DD (예: 2026-07-12)');
+  }
+}
+
+function updateDday() {
+  const btn = document.getElementById('dday-btn');
+  const examDate = getExamDate();
+  if (!examDate) {
+    btn.textContent = '시험일 설정';
+    btn.style.background = 'var(--accent2)';
+    return;
+  }
+  const exam = new Date(examDate + 'T00:00:00');
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  const diff = Math.ceil((exam - now) / 86400000);
+  if (diff > 0) {
+    btn.textContent = `D-${diff}`;
+    btn.style.background = diff <= 7 ? 'var(--danger)' : diff <= 14 ? 'var(--warning)' : 'var(--accent)';
+    if (diff <= 7) btn.style.color = 'white';
+    else if (diff <= 14) btn.style.color = '#000';
+  } else if (diff === 0) {
+    btn.textContent = 'D-DAY!';
+    btn.style.background = 'var(--danger)';
+  } else {
+    btn.textContent = '시험 완료';
+    btn.style.background = 'var(--success)';
+  }
+}
+
 function updateHomeStats() {
   document.getElementById('stat-streak').textContent = stats.streak;
   document.getElementById('stat-today').textContent = stats.todayCount;
   document.getElementById('stat-mastered').textContent = getMasteredCount();
   const due = getDueWords().length;
   document.getElementById('stat-review').textContent = due;
-  const dailyDesc = document.getElementById('daily-review-desc');
-  if (dailyDesc) dailyDesc.textContent =
-    due > 0 ? `${due}개 단어 복습 필요` : '모두 완료! 추가 연습하기';
+
+  updateDday();
+  updateHomeTodoSummary();
+}
+
+function updateHomeTodoSummary() {
+  const container = document.getElementById('home-todo-items');
+  if (!container) return;
+
+  // Vocab session status
+  const vocabDone = [1,2,3,4,5].filter(id => isSessionDone(id)).length;
+  // Daily quest status
+  const dq = getDailyQuest();
+  const questDone = dq ? dq.completed : 0;
+
+  container.innerHTML = `
+    <div style="flex:1; text-align:center; padding:8px; background:var(--card); border-radius:10px;">
+      <div style="font-size:18px; font-weight:700; color:${vocabDone >= 5 ? 'var(--success)' : 'var(--accent)'};">${vocabDone}/5</div>
+      <div style="font-size:11px; color:var(--text2);">단어 세션</div>
+    </div>
+    <div style="flex:1; text-align:center; padding:8px; background:var(--card); border-radius:10px;">
+      <div style="font-size:18px; font-weight:700; color:${questDone >= 5 ? 'var(--success)' : 'var(--accent)'};">${questDone}/5</div>
+      <div style="font-size:11px; color:var(--text2);">문장 퀘스트</div>
+    </div>
+    <div style="flex:1; text-align:center; padding:8px; background:var(--card); border-radius:10px;">
+      <div style="font-size:18px; font-weight:700; color:var(--warning);">${stats.todayCount}</div>
+      <div style="font-size:11px; color:var(--text2);">총 복습</div>
+    </div>
+  `;
+
+  // Home card subtexts
+  const vocabProgress = document.getElementById('home-vocab-progress');
+  if (vocabProgress && hskWords.length > 0) {
+    const learned = hskWords.filter(w => { const s = getVocabSRS(w.id); return s.correct > 0 || s.wrong > 0; }).length;
+    vocabProgress.textContent = `${learned}/${hskWords.length}`;
+  }
+
+  const questStatus = document.getElementById('home-quest-status');
+  if (questStatus) {
+    questStatus.textContent = dq ? `오늘 ${questDone}/5` : '';
+  }
 }
 
 // =================== NAVIGATION ===================
@@ -1062,12 +1163,16 @@ function renderQuizQuestion() {
     <div style="margin-bottom:12px;">
       ${q.pinyins.map((p, i) => `
         <div style="margin-bottom:8px;">
-          ${showPinyin ? `<div style="font-size:12px; color:var(--warning); margin-bottom:4px;">${p}</div>` : `<div style="font-size:12px; color:#555; margin-bottom:4px;">Blank ${i+1}</div>`}
+          <div style="font-size:12px; margin-bottom:4px; color:${showPinyin ? 'var(--warning)' : '#555'};">
+            <span style="background:var(--accent); color:white; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:700; margin-right:4px;">${i+1}</span>
+            ${showPinyin ? p : ''}
+          </div>
           <input type="text" class="quiz-input" id="qi-${i}" lang="zh-CN"
-            placeholder="중국어 입력..." style="width:100%; padding:10px; font-size:18px;
+            placeholder="빈칸 ${i+1} 입력..." style="width:100%; padding:10px; font-size:18px;
             background:var(--card2); border:2px solid #333; border-radius:10px; color:var(--text); outline:none;"
             onfocus="this.style.borderColor='var(--accent)'"
-            onblur="this.style.borderColor='#333'">
+            onblur="this.style.borderColor='#333'"
+            autocomplete="off" autocorrect="off" spellcheck="false">
         </div>
       `).join('')}
     </div>
@@ -2925,7 +3030,7 @@ if ('serviceWorker' in navigator) {
   }).catch(() => {});
   // Purge old caches
   if (window.caches) {
-    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v16') caches.delete(k); }));
+    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v17') caches.delete(k); }));
   }
 }
 </script>
