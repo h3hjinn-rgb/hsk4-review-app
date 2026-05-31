@@ -632,12 +632,6 @@ body {
     <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">오늘의 세션</div>
     <div id="plan-sessions"></div>
 
-    <!-- Previous days review -->
-    <div id="prev-review-section" style="display:none; margin-top:16px;">
-      <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">이전 학습 복습</div>
-      <div id="prev-review-cards"></div>
-    </div>
-
     <!-- Overall progress -->
     <div style="font-size:13px; color:var(--text2); margin-top:16px; margin-bottom:8px;">전체 진도</div>
     <div class="vocab-stat-row">
@@ -2301,7 +2295,7 @@ const SESSIONS = [
   { id: 2, icon: '🚇', name: '출근 2', desc: '새 단어 학습', time: '출근길', type: 'new', size: 50 },
   { id: 3, icon: '☀️', name: '출근 3', desc: '새 단어 학습', time: '출근길', type: 'new', size: 50 },
   { id: 4, icon: '🌆', name: '퇴근', desc: '오늘 배운 단어 복습', time: '퇴근길', type: 'today_review', size: 30 },
-  { id: 5, icon: '🌙', name: '자기 전', desc: '틀렸거나 느린 단어 복습', time: '자기 전', type: 'today_weak', size: 30 },
+  { id: 5, icon: '🌙', name: '자기 전', desc: '여태 배운 단어 총복습', time: '자기 전', type: 'all_review', size: 50 },
 ];
 
 function getPlanState() {
@@ -2455,11 +2449,14 @@ function updateVocabPage() {
       } else if (sess.type === 'today_weak') {
         const weak = getTodayWeakWords().length;
         sessDesc = weak > 0 ? `틀렸거나 느린 단어 ${Math.min(weak, sess.size)}개 복습` : '복습할 단어 없음';
+      } else if (sess.type === 'all_review') {
+        const allLearned = hskWords.filter(w => w.sentence && (() => { const s = getVocabSRS(w.id); return s.correct > 0 || s.wrong > 0; })());
+        sessDesc = allLearned.length > 0 ? `여태 배운 ${allLearned.length}개 중 ${Math.min(allLearned.length, sess.size)}개 복습` : '아직 학습한 단어 없음';
       }
     }
 
     if (done) {
-      const isRepeatable = sess.type === 'today_review' || sess.type === 'today_weak';
+      const isRepeatable = sess.type === 'today_review' || sess.type === 'today_weak' || sess.type === 'all_review';
       html += `<div class="card" style="padding:12px 16px; background: #22c55e15; border: 1px solid #22c55e33;" ${isRepeatable ? `data-sess-id="${sess.id}" data-sess-type="${sess.type}"` : ''}>
         <div style="display:flex; align-items:center; gap:12px;">
           <div style="font-size:24px;">${sess.icon}</div>
@@ -2512,8 +2509,6 @@ function updateVocabPage() {
   }
   document.getElementById('vocab-avg-speed').textContent = `평균 응답: ${timeCount > 0 ? (totalTime / timeCount / 1000).toFixed(1) : '-'}초`;
 
-  // Render previous days review section
-  renderPrevReview(day);
 }
 
 function filterVocab() {} // no longer needed but keep for compatibility
@@ -2535,129 +2530,6 @@ function getTodayWeakWords() {
     if (s.level === 0 && (s.correct > 0 || s.wrong > 0)) return true; // reset to 0
     return false;
   });
-}
-
-// --- Previous Days Review ---
-function renderPrevReview(currentDay) {
-  const section = document.getElementById('prev-review-section');
-  const container = document.getElementById('prev-review-cards');
-  if (currentDay <= 1) { section.style.display = 'none'; return; }
-
-  // Get all previous days' words that have been learned
-  const prevDays = PLAN.slice(0, currentDay - 1).filter(p => p.day < 13); // exclude 총복습 days
-  let prevLearnedWords = [];
-  for (const p of prevDays) {
-    const words = hskWords.filter(w => w.id >= p.from && w.id <= p.to && w.sentence);
-    const learned = words.filter(w => {
-      const s = getVocabSRS(w.id);
-      return s.correct > 0 || s.wrong > 0;
-    });
-    prevLearnedWords.push(...learned);
-  }
-
-  // Deduplicate
-  const seen = new Set();
-  prevLearnedWords = prevLearnedWords.filter(w => { if (seen.has(w.id)) return false; seen.add(w.id); return true; });
-
-  if (prevLearnedWords.length === 0) { section.style.display = 'none'; return; }
-
-  // Find weak/due words from previous days
-  const weakWords = prevLearnedWords.filter(w => {
-    const s = getVocabSRS(w.id);
-    return s.level < 5 || (s.nextReview <= Date.now());
-  });
-
-  section.style.display = 'block';
-  let html = '';
-
-  // All previous days mixed review
-  html += `<div class="card" id="prev-review-all" style="padding:12px 16px; border: 1px solid var(--accent2);">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <div style="font-size:24px;">&#x1F504;</div>
-      <div style="flex:1;">
-        <div class="card-title" style="font-size:14px;">1~${currentDay-1}일차 전체 복습</div>
-        <div class="card-sub">이전에 배운 ${prevLearnedWords.length}개 단어 중 랜덤 30개 테스트</div>
-      </div>
-      <div style="color:var(--accent); font-size:20px;">&#x203A;</div>
-    </div>
-  </div>`;
-
-  // Weak words review
-  if (weakWords.length > 0) {
-    html += `<div class="card" id="prev-review-weak" style="padding:12px 16px; border: 1px solid var(--danger)33;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="font-size:24px;">&#x1F4AA;</div>
-        <div style="flex:1;">
-          <div class="card-title" style="font-size:14px; color:var(--warning);">약한 단어 집중 복습</div>
-          <div class="card-sub">아직 완벽하지 않은 ${weakWords.length}개 단어</div>
-        </div>
-        <div style="color:var(--warning); font-size:20px;">&#x203A;</div>
-      </div>
-    </div>`;
-  }
-
-  // Per-day review buttons
-  html += `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">`;
-  for (const p of prevDays) {
-    const dayWords = hskWords.filter(w => w.id >= p.from && w.id <= p.to && w.sentence);
-    const dayLearned = dayWords.filter(w => { const s = getVocabSRS(w.id); return s.correct > 0 || s.wrong > 0; });
-    if (dayLearned.length === 0) continue;
-    const dayWeak = dayLearned.filter(w => { const s = getVocabSRS(w.id); return s.level < 5; });
-    html += `<button class="chip prev-day-chip" data-day="${p.day}" style="font-size:12px;${dayWeak.length > 0 ? 'border-color:var(--warning);' : 'border-color:var(--success);'}">
-      Day${p.day} <span style="font-size:10px; color:${dayWeak.length > 0 ? 'var(--warning)' : 'var(--success)'};">${dayWeak.length > 0 ? dayWeak.length + '개 약함' : '✓'}</span>
-    </button>`;
-  }
-  html += `</div>`;
-
-  container.innerHTML = html;
-
-  // Event listeners
-  const allBtn = document.getElementById('prev-review-all');
-  if (allBtn) allBtn.addEventListener('click', () => startPrevDayReview('all', currentDay));
-  const weakBtn = document.getElementById('prev-review-weak');
-  if (weakBtn) weakBtn.addEventListener('click', () => startPrevDayReview('weak', currentDay));
-  container.querySelectorAll('.prev-day-chip').forEach(chip => {
-    chip.addEventListener('click', () => startPrevDayReview('day', currentDay, parseInt(chip.dataset.day)));
-  });
-}
-
-function startPrevDayReview(mode, currentDay, specificDay) {
-  const prevDays = specificDay
-    ? PLAN.filter(p => p.day === specificDay)
-    : PLAN.slice(0, currentDay - 1).filter(p => p.day < 13);
-
-  let pool = [];
-  for (const p of prevDays) {
-    const words = hskWords.filter(w => w.id >= p.from && w.id <= p.to && w.sentence);
-    const learned = words.filter(w => { const s = getVocabSRS(w.id); return s.correct > 0 || s.wrong > 0; });
-    pool.push(...learned);
-  }
-
-  // Deduplicate
-  const seen = new Set();
-  pool = pool.filter(w => { if (seen.has(w.id)) return false; seen.add(w.id); return true; });
-
-  if (mode === 'weak') {
-    pool = pool.filter(w => {
-      const s = getVocabSRS(w.id);
-      return s.level < 5 || (s.nextReview <= Date.now());
-    });
-  }
-
-  if (pool.length === 0) { toast('복습할 단어가 없습니다'); return; }
-
-  pool.sort(() => Math.random() - 0.5);
-  const queue = pool.slice(0, 30);
-
-  vsState = {
-    queue,
-    current: 0, score: 0, totalAnswered: 0,
-    wrongQueue: [], startTime: 0, answered: false,
-    results: [], sessionId: 0
-  };
-
-  showPage('vocabsession');
-  renderVocabQuestion();
 }
 
 // --- Plan Session ---
@@ -2688,6 +2560,23 @@ function startPlanSession(sessionId, type) {
     if (queue.length < 10) {
       const learned = getTodayLearnedWords().filter(w => !queue.find(q => q.id === w.id)).sort(() => Math.random() - 0.5);
       queue.push(...learned.slice(0, size - queue.length));
+    }
+  } else if (type === 'all_review') {
+    // All previously learned words (today + past days)
+    const allLearned = hskWords.filter(w => {
+      if (!w.sentence) return false;
+      const s = getVocabSRS(w.id);
+      return s.correct > 0 || s.wrong > 0;
+    });
+    // Prioritize: weak/due words first, then random from the rest
+    const weak = allLearned.filter(w => {
+      const s = getVocabSRS(w.id);
+      return s.level < 3 || s.wrong > 0 || (s.nextReview <= Date.now());
+    }).sort(() => Math.random() - 0.5);
+    const rest = allLearned.filter(w => !weak.find(q => q.id === w.id)).sort(() => Math.random() - 0.5);
+    queue.push(...weak.slice(0, size));
+    if (queue.length < size) {
+      queue.push(...rest.slice(0, size - queue.length));
     }
   } else {
     // Mixed fallback
@@ -2918,7 +2807,7 @@ if ('serviceWorker' in navigator) {
   }).catch(() => {});
   // Purge old caches
   if (window.caches) {
-    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v14') caches.delete(k); }));
+    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v15') caches.delete(k); }));
   }
 }
 </script>
