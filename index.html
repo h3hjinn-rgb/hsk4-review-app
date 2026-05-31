@@ -110,11 +110,14 @@ body {
 .quiz-sentence .blank {
   display: inline-block;
   min-width: 60px;
-  border-bottom: 2px solid var(--accent);
-  margin: 0 2px;
+  border-bottom: 3px solid var(--accent);
+  margin: 0 4px;
+  padding: 2px 8px;
   text-align: center;
   color: var(--accent);
   font-weight: 600;
+  background: rgba(233,69,96,0.08);
+  border-radius: 4px 4px 0 0;
 }
 .quiz-sentence .blank.correct { border-color: var(--success); color: var(--success); }
 .quiz-sentence .blank.wrong { border-color: var(--danger); color: var(--danger); }
@@ -454,10 +457,29 @@ body {
   <div id="page-test" class="page">
     <button class="back-btn" onclick="showPage('home')">&lt; 뒤로</button>
     <div class="page-header">문장 테스트</div>
+
+    <!-- Daily Quest -->
+    <div id="daily-quest-card" style="background: linear-gradient(135deg, #0f3460, #e94560aa); border-radius:var(--radius); padding:16px; margin-bottom:16px; cursor:pointer;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:11px; color:#ddd;">오늘의 문장 퀘스트</div>
+          <div style="font-size:18px; font-weight:700;">매일 5문장 도전</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:24px; font-weight:700;" id="daily-quest-status">0/5</div>
+          <div style="font-size:11px; color:#ddd;">완료</div>
+        </div>
+      </div>
+      <div style="height:6px; background:rgba(255,255,255,0.15); border-radius:3px; margin-top:12px; overflow:hidden;">
+        <div id="daily-quest-bar" style="height:100%; background:var(--success); width:0%; transition:width .5s;"></div>
+      </div>
+    </div>
+
     <div class="setting-row" style="margin-bottom:12px;">
       <div class="setting-label">병음 힌트</div>
       <div class="toggle" id="pinyin-toggle" onclick="togglePinyin()"></div>
     </div>
+    <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">세트별 연습</div>
     <div class="chips" id="test-level-chips">
       <div class="chip active" data-level="all" onclick="filterTestSets('all')">All</div>
       <div class="chip" data-level="1-2" onclick="filterTestSets('1-2')">1-2</div>
@@ -778,6 +800,8 @@ async function loadData() {
 
   updateHomeStats();
   renderTestList();
+  updateDailyQuestUI();
+  document.getElementById('daily-quest-card').addEventListener('click', startDailyQuest);
   renderNoteCategories();
   renderAudioList('1-2');
   loadTypingQuestion();
@@ -878,6 +902,66 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 2000);
 }
 
+// =================== DAILY SENTENCE QUEST ===================
+function getDailyQuestKey() { return 'dq_' + new Date().toDateString(); }
+
+function getDailyQuest() {
+  const key = getDailyQuestKey();
+  let dq = JSON.parse(localStorage.getItem(key) || 'null');
+  if (!dq && testSets.length > 0) {
+    // Pick 5 random questions from all sets
+    const allQ = [];
+    for (const s of testSets) {
+      for (const q of s.questions) {
+        allQ.push({ ...q, setNum: s.set });
+      }
+    }
+    allQ.sort(() => Math.random() - 0.5);
+    dq = { questions: allQ.slice(0, 5), completed: 0, score: 0 };
+    localStorage.setItem(key, JSON.stringify(dq));
+  }
+  return dq;
+}
+
+function saveDailyQuest(dq) {
+  localStorage.setItem(getDailyQuestKey(), JSON.stringify(dq));
+}
+
+function updateDailyQuestUI() {
+  const dq = getDailyQuest();
+  if (!dq) return;
+  document.getElementById('daily-quest-status').textContent = `${dq.completed}/5`;
+  document.getElementById('daily-quest-bar').style.width = `${(dq.completed / 5) * 100}%`;
+  const card = document.getElementById('daily-quest-card');
+  if (dq.completed >= 5) {
+    card.style.background = 'linear-gradient(135deg, #22c55e33, #22c55e11)';
+    card.style.border = '1px solid #22c55e33';
+  }
+}
+
+function startDailyQuest() {
+  const dq = getDailyQuest();
+  if (!dq || dq.completed >= 5) {
+    if (dq && dq.completed >= 5) {
+      toast('오늘의 퀘스트 완료! 내일 새 문장이 나옵니다');
+    }
+    return;
+  }
+  currentQuiz = {
+    set: { questions: dq.questions.slice(dq.completed), set: 'daily' },
+    current: 0,
+    score: 0,
+    answers: [],
+    isDaily: true,
+    dailyStartIdx: dq.completed
+  };
+  document.getElementById('quiz-back-btn').onclick = () => {
+    if (confirm('퀴즈를 종료할까요?')) { showPage('test'); updateDailyQuestUI(); }
+  };
+  showPage('quiz');
+  renderQuizQuestion();
+}
+
 // =================== TEST SETS ===================
 function renderTestList(filter) {
   const container = document.getElementById('test-list');
@@ -970,7 +1054,10 @@ function renderQuizQuestion() {
   container.innerHTML = `
     <div class="quiz-korean">${q.korean}</div>
     ${showPinyin ? `<div class="quiz-pinyin">${q.pinyins.join('  |  ')}</div>` : ''}
-    <div class="quiz-sentence">${q.chineseTemplate.replace(/\t+/g, ' <span class="blank">___</span> ')}</div>
+    <div class="quiz-sentence">${(() => {
+      let bi = 0;
+      return q.chineseTemplate.replace(/\t+/g, () => ` <span class="blank">${++bi}</span> `);
+    })()}</div>
     <div style="font-size:13px; color:var(--warning); margin-bottom:12px; font-style:italic; text-align:center;">${toPinyin(q.chineseTemplate.replace(/\t+/g, ''))}</div>
     <div style="margin-bottom:12px;">
       ${q.pinyins.map((p, i) => `
@@ -1017,10 +1104,12 @@ function showQuizAnswer() {
   const feedback = document.getElementById('quiz-feedback');
   feedback.style.display = 'block';
   feedback.style.background = 'var(--card2)';
-  feedback.innerHTML = `<div style="font-size:13px; color:var(--text2); margin-bottom:4px;">참고 (병음):</div>
-    <div style="font-size:16px;">${q.pinyins.join(' | ')}</div>
-    <div style="font-size:13px; color:var(--text2); margin-top:8px;">문장 틀:</div>
-    <div style="font-size:16px;">${q.chineseTemplate}</div>`;
+  const answersHtml = q.pinyins.map((p, i) => {
+    const ch = lookupChineseByPinyin(p);
+    return `<span style="font-size:18px; font-weight:600; color:var(--success);">${ch || '?'}</span> <span style="font-size:12px; color:var(--warning);">${p}</span>`;
+  }).join(' &nbsp;|&nbsp; ');
+  feedback.innerHTML = `<div style="font-size:13px; color:var(--text2); margin-bottom:4px;">정답:</div>
+    <div style="margin-bottom:8px;">${answersHtml}</div>`;
 }
 
 function normalizePinyinForCompare(str) {
@@ -1029,6 +1118,12 @@ function normalizePinyinForCompare(str) {
     .replace(/[āáǎà]/gi, 'a').replace(/[ēéěè]/gi, 'e').replace(/[īíǐì]/gi, 'i')
     .replace(/[ōóǒò]/gi, 'o').replace(/[ūúǔù]/gi, 'u').replace(/[ǖǘǚǜü]/gi, 'v')
     .replace(/[^a-z]/gi, '').toLowerCase();
+}
+
+function lookupChineseByPinyin(pinyin) {
+  const norm = normalizePinyinForCompare(pinyin);
+  const w = hskWords.find(w => normalizePinyinForCompare(w.pinyin) === norm);
+  return w ? w.chinese : '';
 }
 
 function checkQuizAnswer() {
@@ -1042,7 +1137,8 @@ function checkQuizAnswer() {
     const normalExpected = normalizePinyinForCompare(expectedPinyin);
     const normalUser = normalizePinyinForCompare(userPinyin || userInput);
     const isCorrect = normalUser.length > 0 && normalUser === normalExpected;
-    return { userInput, userPinyin, expectedPinyin, isCorrect };
+    const correctChinese = lookupChineseByPinyin(expectedPinyin);
+    return { userInput, userPinyin, expectedPinyin, correctChinese, isCorrect };
   });
 
   const allCorrect = results.every(r => r.isCorrect);
@@ -1062,14 +1158,22 @@ function checkQuizAnswer() {
   feedback.style.background = 'var(--card2)';
 
   const detailHtml = results.map((r, i) => `
-    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; ${i > 0 ? 'border-top:1px solid #333;' : ''}">
-      <div>
-        <span style="font-size:11px; color:var(--text2);">Blank ${i+1}:</span>
-        <span style="font-size:15px; ${r.isCorrect ? 'color:var(--success);' : 'color:var(--danger);'}">${r.userInput || '(미입력)'}</span>
+    <div style="padding:8px 0; ${i > 0 ? 'border-top:1px solid #333;' : ''}">
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+        <span style="font-size:11px; color:var(--text2); min-width:16px;">${i+1}</span>
+        <span style="font-size:11px; padding:2px 6px; border-radius:4px; background:${r.isCorrect ? '#22c55e22; color:var(--success)' : '#ef444422; color:var(--danger)'};">${r.isCorrect ? '정답' : '오답'}</span>
       </div>
-      <div style="text-align:right;">
-        <span style="font-size:12px; color:var(--warning);">${r.expectedPinyin}</span>
-        ${!r.isCorrect ? ` <span style="font-size:11px; color:var(--danger);">✗</span>` : ` <span style="font-size:11px; color:var(--success);">✓</span>`}
+      <div style="display:flex; gap:8px; margin-left:22px;">
+        <div style="flex:1; padding:6px 10px; background:${r.isCorrect ? '#22c55e11' : '#ef444411'}; border-radius:8px; border:1px solid ${r.isCorrect ? '#22c55e33' : '#ef444433'};">
+          <div style="font-size:10px; color:var(--text2); margin-bottom:2px;">내 답</div>
+          <div style="font-size:18px; font-weight:600; color:${r.isCorrect ? 'var(--success)' : 'var(--danger)'};">${r.userInput || '(미입력)'}</div>
+          ${r.userInput && !r.isCorrect ? `<div style="font-size:11px; color:var(--text2);">${r.userPinyin || ''}</div>` : ''}
+        </div>
+        <div style="flex:1; padding:6px 10px; background:#22c55e11; border-radius:8px; border:1px solid #22c55e33;">
+          <div style="font-size:10px; color:var(--text2); margin-bottom:2px;">정답</div>
+          <div style="font-size:18px; font-weight:600; color:var(--success);">${r.correctChinese || '?'}</div>
+          <div style="font-size:11px; color:var(--warning);">${r.expectedPinyin}</div>
+        </div>
       </div>
     </div>
   `).join('');
@@ -1093,6 +1197,16 @@ function gradeQuiz(correct) {
   q.pinyins.forEach(p => updateSRS(`test_${p}`, correct));
   recordReview();
 
+  // Update daily quest progress
+  if (currentQuiz.isDaily) {
+    const dq = getDailyQuest();
+    if (dq) {
+      dq.completed = currentQuiz.dailyStartIdx + currentQuiz.current + 1;
+      if (correct) dq.score++;
+      saveDailyQuest(dq);
+    }
+  }
+
   currentQuiz.current++;
   if (currentQuiz.current >= currentQuiz.set.questions.length) {
     showQuizResult();
@@ -1105,28 +1219,32 @@ function showQuizResult() {
   const total = currentQuiz.set.questions.length;
   const score = currentQuiz.score;
   const pct = Math.round((score / total) * 100);
+  const isDaily = currentQuiz.isDaily;
 
-  // Save best score
-  const bestKey = `set_${currentQuiz.set.set}_best`;
-  const prev = parseInt(localStorage.getItem(bestKey) || '0');
-  if (score > prev) localStorage.setItem(bestKey, score);
+  // Save best score (skip for daily quest)
+  if (!isDaily) {
+    const bestKey = `set_${currentQuiz.set.set}_best`;
+    const prev = parseInt(localStorage.getItem(bestKey) || '0');
+    if (score > prev) localStorage.setItem(bestKey, score);
+  }
 
   const setNum = currentQuiz.set.set;
   const quizContent = document.getElementById('quiz-content');
   quizContent.innerHTML = `
     <div class="result-screen">
       <div class="result-score">${pct}%</div>
-      <div class="result-detail">${score}/${total} correct</div>
+      <div class="result-detail">${score}/${total} 정답</div>
       <div style="margin-bottom:24px; color:var(--text2);">
-        ${pct >= 80 ? '훌륭해요!' : pct >= 60 ? '잘하고 있어요!' : '더 연습해봐요!'}
+        ${isDaily ? (pct >= 80 ? '오늘의 퀘스트 클리어!' : '내일 다시 도전!') : (pct >= 80 ? '훌륭해요!' : pct >= 60 ? '잘하고 있어요!' : '더 연습해봐요!')}
       </div>
       <div class="btn-group">
-        <button class="btn btn-outline" id="quiz-result-back">세트 목록</button>
-        <button class="btn btn-primary" id="quiz-result-retry">다시 풀기</button>
+        <button class="btn btn-primary btn-block" id="quiz-result-back">${isDaily ? '돌아가기' : '세트 목록'}</button>
       </div>
     </div>`;
-  quizContent.querySelector('#quiz-result-back').addEventListener('click', () => showPage('test'));
-  quizContent.querySelector('#quiz-result-retry').addEventListener('click', () => startQuiz(setNum));
+  quizContent.querySelector('#quiz-result-back').addEventListener('click', () => {
+    showPage('test');
+    if (isDaily) updateDailyQuestUI();
+  });
 }
 
 // =================== SECRET NOTES ===================
@@ -2807,7 +2925,7 @@ if ('serviceWorker' in navigator) {
   }).catch(() => {});
   // Purge old caches
   if (window.caches) {
-    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v15') caches.delete(k); }));
+    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v16') caches.delete(k); }));
   }
 }
 </script>
