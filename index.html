@@ -888,18 +888,18 @@ function getMasteredCount() {
 }
 
 // =================== EXAM D-DAY ===================
-function getExamDate() { return localStorage.getItem('hsk4_exam_date') || ''; }
+function getExamDate() { return localStorage.getItem('hsk4_exam_date') || '2026-06-28'; }
 function setExamDate(dateStr) { localStorage.setItem('hsk4_exam_date', dateStr); }
 
 function promptExamDate() {
   const current = getExamDate();
-  const input = prompt('시험 날짜를 입력하세요 (예: 2026-07-12)', current || '2026-07-12');
+  const input = prompt('시험 날짜를 입력하세요 (예: 2026-06-28)', current);
   if (input && /^\d{4}-\d{2}-\d{2}$/.test(input.trim())) {
     setExamDate(input.trim());
     updateDday();
     toast('시험 날짜가 설정되었습니다');
   } else if (input !== null) {
-    toast('형식: YYYY-MM-DD (예: 2026-07-12)');
+    toast('형식: YYYY-MM-DD (예: 2026-06-28)');
   }
 }
 
@@ -3030,7 +3030,7 @@ if ('serviceWorker' in navigator) {
   }).catch(() => {});
   // Purge old caches
   if (window.caches) {
-    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v17') caches.delete(k); }));
+    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v18') caches.delete(k); }));
   }
 }
 </script>

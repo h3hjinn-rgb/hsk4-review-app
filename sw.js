@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hsk4-v17';
+const CACHE_NAME = 'hsk4-v18';
 const ASSETS = [
   '/',
   '/index.html',
