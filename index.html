@@ -632,6 +632,12 @@ body {
     <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">오늘의 세션</div>
     <div id="plan-sessions"></div>
 
+    <!-- Previous days review -->
+    <div id="prev-review-section" style="display:none; margin-top:16px;">
+      <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">이전 학습 복습</div>
+      <div id="prev-review-cards"></div>
+    </div>
+
     <!-- Overall progress -->
     <div style="font-size:13px; color:var(--text2); margin-top:16px; margin-bottom:8px;">전체 진도</div>
     <div class="vocab-stat-row">
@@ -971,6 +977,7 @@ function renderQuizQuestion() {
     <div class="quiz-korean">${q.korean}</div>
     ${showPinyin ? `<div class="quiz-pinyin">${q.pinyins.join('  |  ')}</div>` : ''}
     <div class="quiz-sentence">${q.chineseTemplate.replace(/\t+/g, ' <span class="blank">___</span> ')}</div>
+    <div style="font-size:13px; color:var(--warning); margin-bottom:12px; font-style:italic; text-align:center;">${toPinyin(q.chineseTemplate.replace(/\t+/g, ''))}</div>
     <div style="margin-bottom:12px;">
       ${q.pinyins.map((p, i) => `
         <div style="margin-bottom:8px;">
@@ -1022,27 +1029,64 @@ function showQuizAnswer() {
     <div style="font-size:16px;">${q.chineseTemplate}</div>`;
 }
 
+function normalizePinyinForCompare(str) {
+  // Remove tones, spaces, punctuation and lowercase for comparison
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[āáǎà]/gi, 'a').replace(/[ēéěè]/gi, 'e').replace(/[īíǐì]/gi, 'i')
+    .replace(/[ōóǒò]/gi, 'o').replace(/[ūúǔù]/gi, 'u').replace(/[ǖǘǚǜü]/gi, 'v')
+    .replace(/[^a-z]/gi, '').toLowerCase();
+}
+
 function checkQuizAnswer() {
   const q = currentQuiz.set.questions[currentQuiz.current];
   const feedback = document.getElementById('quiz-feedback');
 
-  // Self-check mode - show what they typed and let them judge
-  const answers = q.pinyins.map((p, i) => {
+  const results = q.pinyins.map((expectedPinyin, i) => {
     const inp = document.getElementById('qi-' + i);
-    return inp ? inp.value.trim() : '';
+    const userInput = inp ? inp.value.trim() : '';
+    const userPinyin = toPinyin(userInput);
+    const normalExpected = normalizePinyinForCompare(expectedPinyin);
+    const normalUser = normalizePinyinForCompare(userPinyin || userInput);
+    const isCorrect = normalUser.length > 0 && normalUser === normalExpected;
+    return { userInput, userPinyin, expectedPinyin, isCorrect };
   });
 
-  const hasInput = answers.some(a => a.length > 0);
+  const allCorrect = results.every(r => r.isCorrect);
+  const correctCount = results.filter(r => r.isCorrect).length;
+
+  // Highlight each input field
+  results.forEach((r, i) => {
+    const inp = document.getElementById('qi-' + i);
+    if (inp) {
+      inp.style.borderColor = r.isCorrect ? 'var(--success)' : 'var(--danger)';
+      inp.style.color = r.isCorrect ? 'var(--success)' : 'var(--danger)';
+      inp.readOnly = true;
+    }
+  });
 
   feedback.style.display = 'block';
-  feedback.innerHTML = `
-    <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">내 답: ${answers.join(' | ')}</div>
-    <div style="font-size:14px; margin-bottom:12px;">맞았나요?</div>
-    <div class="btn-group">
-      <button class="btn btn-outline" onclick="gradeQuiz(false)" style="border-color:var(--danger); color:var(--danger);">틀림</button>
-      <button class="btn btn-outline" onclick="gradeQuiz(true)" style="border-color:var(--success); color:var(--success);">맞음</button>
-    </div>`;
   feedback.style.background = 'var(--card2)';
+
+  const detailHtml = results.map((r, i) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; ${i > 0 ? 'border-top:1px solid #333;' : ''}">
+      <div>
+        <span style="font-size:11px; color:var(--text2);">Blank ${i+1}:</span>
+        <span style="font-size:15px; ${r.isCorrect ? 'color:var(--success);' : 'color:var(--danger);'}">${r.userInput || '(미입력)'}</span>
+      </div>
+      <div style="text-align:right;">
+        <span style="font-size:12px; color:var(--warning);">${r.expectedPinyin}</span>
+        ${!r.isCorrect ? ` <span style="font-size:11px; color:var(--danger);">✗</span>` : ` <span style="font-size:11px; color:var(--success);">✓</span>`}
+      </div>
+    </div>
+  `).join('');
+
+  feedback.innerHTML = `
+    <div style="font-size:16px; font-weight:600; margin-bottom:8px; color:${allCorrect ? 'var(--success)' : 'var(--danger)'};">
+      ${allCorrect ? '정답!' : `${correctCount}/${results.length} 맞음`}
+    </div>
+    ${detailHtml}
+    <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="gradeQuiz(${allCorrect})">다음</button>
+  `;
 }
 
 function gradeQuiz(correct) {
@@ -2467,6 +2511,9 @@ function updateVocabPage() {
     if (s.avgTime > 0) { totalTime += s.avgTime; timeCount++; }
   }
   document.getElementById('vocab-avg-speed').textContent = `평균 응답: ${timeCount > 0 ? (totalTime / timeCount / 1000).toFixed(1) : '-'}초`;
+
+  // Render previous days review section
+  renderPrevReview(day);
 }
 
 function filterVocab() {} // no longer needed but keep for compatibility
@@ -2488,6 +2535,129 @@ function getTodayWeakWords() {
     if (s.level === 0 && (s.correct > 0 || s.wrong > 0)) return true; // reset to 0
     return false;
   });
+}
+
+// --- Previous Days Review ---
+function renderPrevReview(currentDay) {
+  const section = document.getElementById('prev-review-section');
+  const container = document.getElementById('prev-review-cards');
+  if (currentDay <= 1) { section.style.display = 'none'; return; }
+
+  // Get all previous days' words that have been learned
+  const prevDays = PLAN.slice(0, currentDay - 1).filter(p => p.day < 13); // exclude 총복습 days
+  let prevLearnedWords = [];
+  for (const p of prevDays) {
+    const words = hskWords.filter(w => w.id >= p.from && w.id <= p.to && w.sentence);
+    const learned = words.filter(w => {
+      const s = getVocabSRS(w.id);
+      return s.correct > 0 || s.wrong > 0;
+    });
+    prevLearnedWords.push(...learned);
+  }
+
+  // Deduplicate
+  const seen = new Set();
+  prevLearnedWords = prevLearnedWords.filter(w => { if (seen.has(w.id)) return false; seen.add(w.id); return true; });
+
+  if (prevLearnedWords.length === 0) { section.style.display = 'none'; return; }
+
+  // Find weak/due words from previous days
+  const weakWords = prevLearnedWords.filter(w => {
+    const s = getVocabSRS(w.id);
+    return s.level < 5 || (s.nextReview <= Date.now());
+  });
+
+  section.style.display = 'block';
+  let html = '';
+
+  // All previous days mixed review
+  html += `<div class="card" id="prev-review-all" style="padding:12px 16px; border: 1px solid var(--accent2);">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div style="font-size:24px;">&#x1F504;</div>
+      <div style="flex:1;">
+        <div class="card-title" style="font-size:14px;">1~${currentDay-1}일차 전체 복습</div>
+        <div class="card-sub">이전에 배운 ${prevLearnedWords.length}개 단어 중 랜덤 30개 테스트</div>
+      </div>
+      <div style="color:var(--accent); font-size:20px;">&#x203A;</div>
+    </div>
+  </div>`;
+
+  // Weak words review
+  if (weakWords.length > 0) {
+    html += `<div class="card" id="prev-review-weak" style="padding:12px 16px; border: 1px solid var(--danger)33;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="font-size:24px;">&#x1F4AA;</div>
+        <div style="flex:1;">
+          <div class="card-title" style="font-size:14px; color:var(--warning);">약한 단어 집중 복습</div>
+          <div class="card-sub">아직 완벽하지 않은 ${weakWords.length}개 단어</div>
+        </div>
+        <div style="color:var(--warning); font-size:20px;">&#x203A;</div>
+      </div>
+    </div>`;
+  }
+
+  // Per-day review buttons
+  html += `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">`;
+  for (const p of prevDays) {
+    const dayWords = hskWords.filter(w => w.id >= p.from && w.id <= p.to && w.sentence);
+    const dayLearned = dayWords.filter(w => { const s = getVocabSRS(w.id); return s.correct > 0 || s.wrong > 0; });
+    if (dayLearned.length === 0) continue;
+    const dayWeak = dayLearned.filter(w => { const s = getVocabSRS(w.id); return s.level < 5; });
+    html += `<button class="chip prev-day-chip" data-day="${p.day}" style="font-size:12px;${dayWeak.length > 0 ? 'border-color:var(--warning);' : 'border-color:var(--success);'}">
+      Day${p.day} <span style="font-size:10px; color:${dayWeak.length > 0 ? 'var(--warning)' : 'var(--success)'};">${dayWeak.length > 0 ? dayWeak.length + '개 약함' : '✓'}</span>
+    </button>`;
+  }
+  html += `</div>`;
+
+  container.innerHTML = html;
+
+  // Event listeners
+  const allBtn = document.getElementById('prev-review-all');
+  if (allBtn) allBtn.addEventListener('click', () => startPrevDayReview('all', currentDay));
+  const weakBtn = document.getElementById('prev-review-weak');
+  if (weakBtn) weakBtn.addEventListener('click', () => startPrevDayReview('weak', currentDay));
+  container.querySelectorAll('.prev-day-chip').forEach(chip => {
+    chip.addEventListener('click', () => startPrevDayReview('day', currentDay, parseInt(chip.dataset.day)));
+  });
+}
+
+function startPrevDayReview(mode, currentDay, specificDay) {
+  const prevDays = specificDay
+    ? PLAN.filter(p => p.day === specificDay)
+    : PLAN.slice(0, currentDay - 1).filter(p => p.day < 13);
+
+  let pool = [];
+  for (const p of prevDays) {
+    const words = hskWords.filter(w => w.id >= p.from && w.id <= p.to && w.sentence);
+    const learned = words.filter(w => { const s = getVocabSRS(w.id); return s.correct > 0 || s.wrong > 0; });
+    pool.push(...learned);
+  }
+
+  // Deduplicate
+  const seen = new Set();
+  pool = pool.filter(w => { if (seen.has(w.id)) return false; seen.add(w.id); return true; });
+
+  if (mode === 'weak') {
+    pool = pool.filter(w => {
+      const s = getVocabSRS(w.id);
+      return s.level < 5 || (s.nextReview <= Date.now());
+    });
+  }
+
+  if (pool.length === 0) { toast('복습할 단어가 없습니다'); return; }
+
+  pool.sort(() => Math.random() - 0.5);
+  const queue = pool.slice(0, 30);
+
+  vsState = {
+    queue,
+    current: 0, score: 0, totalAnswered: 0,
+    wrongQueue: [], startTime: 0, answered: false,
+    results: [], sessionId: 0
+  };
+
+  showPage('vocabsession');
+  renderVocabQuestion();
 }
 
 // --- Plan Session ---
@@ -2598,6 +2768,7 @@ function renderVocabQuestion() {
   content.innerHTML = `
     <div class="sq-ko">${esc(sent.ko)}</div>
     <div class="sq-sentence">${esc(sent.blank).replace('___', '<span class="sq-blank" id="sq-blank">\u3000\u3000</span>')}</div>
+    <div style="font-size:13px; color:var(--warning); text-align:center; margin-bottom:12px; font-style:italic;">${toPinyin(sent.zh)}</div>
     ${isIhap(w) ? `<div style="text-align:center;margin-bottom:8px;"><span style="font-size:11px;padding:3px 10px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사 離合動詞</span></div>` : ''}
     <div class="mc-grid" id="mc-grid">
       ${options.map(o => `
@@ -2747,7 +2918,7 @@ if ('serviceWorker' in navigator) {
   }).catch(() => {});
   // Purge old caches
   if (window.caches) {
-    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v13') caches.delete(k); }));
+    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v14') caches.delete(k); }));
   }
 }
 </script>
