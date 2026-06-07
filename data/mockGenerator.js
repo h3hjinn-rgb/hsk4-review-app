@@ -364,19 +364,22 @@
   // ============================================================
 
   function generateOrderQuestion(hskWords) {
+    // 4급 문장 우선, 최소 6자 이상의 긴 문장 선택
     const candidates = wordsWithSentences(hskWords).filter(
-      w => w.sentence.zh.length >= 4 && w.sentence.zh.length <= 20
+      w => w.sentence.zh.length >= 6 && w.sentence.zh.length <= 25 && w.level >= 3
     );
-    const word = pickOne(candidates);
+    // 4급 우선 정렬
+    const sorted = candidates.sort((a, b) => b.level - a.level);
+    const topPool = sorted.slice(0, Math.max(Math.floor(sorted.length * 0.7), 50));
+    const word = pickOne(topPool);
     const sentence = word.sentence.zh;
     const korean = word.sentence.ko;
 
     // Segment the sentence
     const segments = segmentForOrdering(sentence, hskWords);
 
-    // Need at least 3 segments for a meaningful ordering question
-    if (segments.length < 3) {
-      // Try again with different word
+    // Need at least 4 segments for HSK4 difficulty
+    if (segments.length < 4) {
       return generateOrderQuestion(hskWords);
     }
 
@@ -441,9 +444,8 @@
   function generateFillQuestion(hskWords) {
     const candidates = wordsWithSentences(hskWords);
 
-    // Group by level for similarity
-    const levels = [1, 2, 3, 4];
-    const chosenLevel = pickOne(levels);
+    // 3~4급 위주로 출제
+    const chosenLevel = Math.random() > 0.3 ? 4 : 3;
 
     let pool = candidates.filter(w => w.level === chosenLevel);
     if (pool.length < 5) pool = candidates.filter(w => Math.abs(w.level - chosenLevel) <= 1);

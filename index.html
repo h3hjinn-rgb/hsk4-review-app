@@ -3516,7 +3516,6 @@ function renderOrderUI(q, content, esc) {
   content.innerHTML = `
     <div style="background:var(--card); border-radius:12px; padding:16px; margin-bottom:16px;">
       <div style="font-size:11px; color:var(--text2); margin-bottom:6px;">다음 단어를 올바른 순서로 배열하세요</div>
-      <div style="font-size:15px; color:var(--warning); margin-bottom:8px;">${esc(q.korean)}</div>
     </div>
     <div style="min-height:50px; background:var(--card); border-radius:12px; padding:12px; margin-bottom:12px; display:flex; flex-wrap:wrap; gap:6px; border:2px solid #333;">
       ${sel.length === 0 ? '<span style="color:#555; font-size:13px;">여기에 순서대로 배치됩니다</span>' : ''}
