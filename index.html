@@ -3842,6 +3842,19 @@ function answerMockCommon(isCorrect, q, userAnswer, correctAnswer, extra) {
       ${!isCorrect ? `<div style="font-size:13px; margin-bottom:4px;"><span style="color:var(--danger);">내 답: ${userAnswer}</span> → <span style="color:var(--success);">정답: ${correctAnswer}</span></div>` : ''}
       ${q.type === 'ox' && q.explanation ? `<div style="font-size:13px; color:var(--text2); margin-top:6px;">${q.explanation}</div>` : ''}
       ${q.type === 'order' ? `<div style="font-size:16px; color:var(--success); margin-top:8px;">${q.answer.join('')}</div><div style="font-size:13px; color:var(--warning); font-style:italic;">${toPinyin(q.answer.join(''))}</div><div style="font-size:13px; color:var(--text2);">${q.korean}</div>` : ''}
+      ${q.type === 'sentence_order' ? (() => {
+        const ans = q.answer.split('');
+        return `<div style="background:var(--bg); border-radius:8px; padding:10px; margin-top:8px;">
+          <div style="font-size:11px; color:var(--text2); margin-bottom:6px;">올바른 순서: ${q.answer}</div>
+          ${ans.map((label, i) => {
+            const s = q.sentences.find(x => x.label === label);
+            return `<div style="padding:6px 0; ${i > 0 ? 'border-top:1px solid #333;' : ''}">
+              <div style="font-size:14px;"><span style="color:var(--accent); font-weight:700;">${i+1}. ${label}</span> ${s.text}</div>
+              <div style="font-size:12px; color:var(--warning); font-style:italic;">${toPinyin(s.text)}</div>
+            </div>`;
+          }).join('')}
+        </div>`;
+      })() : ''}
       ${listeningDetail}
       ${wordDetail}
       <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="nextMockQuestion()">다음</button>
@@ -4005,7 +4018,7 @@ if ('serviceWorker' in navigator) {
 
 // 버전 체크: 네트워크에서 직접 version.json을 가져와 현재 버전과 비교
 (function checkUpdate() {
-  const currentV = '21';
+  const currentV = '22';
   fetch('version.json?_=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(data => {
     if (data.v && data.v !== currentV) {
       // 새 버전 발견 - SW 캐시 전부 삭제 후 새로고침
