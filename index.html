@@ -3985,10 +3985,22 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(reg => reg.update());
   });
+  // 서비스워커 강제 갱신: 새 버전 감지 시 즉시 적용
   navigator.serviceWorker.register('sw.js').then(reg => {
     reg.update();
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      if (newWorker) {
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'activated') {
+            // 새 버전 적용됨 - 자동 새로고침
+            window.location.reload();
+          }
+        });
+      }
+    });
   }).catch(() => {});
-  // Purge old caches
+  // 구 캐시 삭제 (학습 데이터는 localStorage라 안전)
   if (window.caches) {
     caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v19') caches.delete(k); }));
   }
