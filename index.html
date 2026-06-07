@@ -3437,7 +3437,7 @@ function startMockTest(type) {
     title = '모의고사 - 독해';
   }
   if (questions.length === 0) { toast('문제 생성 실패'); return; }
-  mockState = { type, questions, current: 0, score: 0, results: [], title };
+  mockState = { type, questions, current: 0, score: 0, results: [], title, _fillIdx: 0 };
   document.getElementById('mock-header').textContent = title;
   showPage('mocktest');
   renderMockQuestion();
@@ -3550,45 +3550,97 @@ function checkMockOrder() {
   answerMockCommon(isCorrect, q, userAnswer, correctAnswer);
 }
 
-// --- Reading Fill ---
+// --- Reading Fill (1문제 = 빈칸 1개, ABCDE 보기 제시) ---
 function renderReadingFill(q, content, esc) {
-  mockState._fillAnswers = new Array(q.sentences.length).fill(-1);
+  // fill 문제: 5개 보기(ABCDE) + 빈칸 문장 1개씩 순차 출제
+  if (mockState._fillIdx === undefined) mockState._fillIdx = 0;
+  const si = mockState._fillIdx;
+  if (si >= q.sentences.length) { nextMockQuestion(); return; }
+
   mockState._answered = false;
-  const optHtml = q.options.map((o, i) => `<span style="background:var(--accent); color:#fff; padding:4px 10px; border-radius:6px; font-size:15px; font-weight:600;">${esc(o.chinese)}</span> <span style="font-size:12px; color:var(--warning);">${esc(o.pinyin)}</span>`).join(' &nbsp; ');
+  const s = q.sentences[si];
+  const labels = ['A', 'B', 'C', 'D', 'E'];
+
   content.innerHTML = `
     <div style="background:var(--card); border-radius:12px; padding:14px; margin-bottom:14px;">
-      <div style="font-size:11px; color:var(--text2); margin-bottom:8px;">보기에서 알맞은 단어를 골라 빈칸을 채우세요</div>
-      <div style="display:flex; flex-wrap:wrap; gap:8px;">${optHtml}</div>
+      <div style="font-size:11px; color:var(--text2); margin-bottom:10px;">보기에서 알맞은 단어를 고르세요 (${si+1}/${q.sentences.length})</div>
+      <div style="display:flex; flex-wrap:wrap; gap:10px;">
+        ${q.options.map((o, i) => `<div style="display:flex; align-items:center; gap:4px;">
+          <span style="font-size:12px; color:var(--accent); font-weight:700;">${labels[i]}</span>
+          <span style="font-size:16px; font-weight:600;">${esc(o.chinese)}</span>
+        </div>`).join('')}
+      </div>
     </div>
-    ${q.sentences.map((s, si) => `
-      <div style="background:var(--card); border-radius:10px; padding:12px; margin-bottom:8px;">
-        <div style="font-size:15px; line-height:1.6; margin-bottom:6px;">${esc(s.blank)}</div>
-        <div style="font-size:12px; color:var(--text2); margin-bottom:8px;">${esc(s.korean)}</div>
-        <div style="display:flex; flex-wrap:wrap; gap:6px;">
-          ${q.options.map((o, oi) => `<button class="btn mock-fill-opt" data-si="${si}" data-oi="${oi}" onclick="selectFillOption(${si},${oi})" style="padding:6px 12px; border-radius:8px; font-size:14px; background:var(--card2); border:2px solid #444; color:var(--text); cursor:pointer;">${esc(o.chinese)}</button>`).join('')}
-        </div>
-      </div>`).join('')}
-    <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="checkMockFill()">확인</button>
+    <div style="background:var(--card); border-radius:12px; padding:16px; margin-bottom:16px;">
+      <div style="font-size:17px; line-height:1.8;">${esc(s.blank)}</div>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+      ${labels.slice(0, q.options.length).map((l, i) => `
+        <button class="btn mock-fill-opt" data-oi="${i}" onclick="answerFillOne(${i})" style="flex:1; padding:14px; font-size:18px; font-weight:700; background:var(--card); border:2px solid #444; border-radius:12px; color:var(--text); cursor:pointer;">${l}</button>
+      `).join('')}
+    </div>
     <div id="mock-feedback" style="display:none;"></div>`;
 }
 
-function selectFillOption(si, oi) {
+function answerFillOne(oi) {
   if (mockState._answered) return;
-  mockState._fillAnswers[si] = oi;
-  document.querySelectorAll(`.mock-fill-opt[data-si="${si}"]`).forEach(btn => {
-    btn.style.borderColor = parseInt(btn.dataset.oi) === oi ? 'var(--accent)' : '#444';
-    btn.style.background = parseInt(btn.dataset.oi) === oi ? 'var(--accent)22' : 'var(--card2)';
+  mockState._answered = true;
+  const q = mockState.questions[mockState.current];
+  const si = mockState._fillIdx || 0;
+  const s = q.sentences[si];
+  const labels = ['A', 'B', 'C', 'D', 'E'];
+  const isCorrect = oi === s.answer;
+  const correctWord = q.options[s.answer];
+  const userWord = q.options[oi];
+
+  if (isCorrect) mockState.score++;
+  mockState.results.push({ question: q, correct: isCorrect, userAnswer: labels[oi] + ' ' + userWord.chinese, correctAnswer: labels[s.answer] + ' ' + correctWord.chinese });
+  recordReview();
+
+  // 선택지 하이라이트
+  document.querySelectorAll('.mock-fill-opt').forEach(btn => {
+    const idx = parseInt(btn.dataset.oi);
+    if (idx === s.answer) { btn.style.borderColor = 'var(--success)'; btn.style.background = '#22c55e22'; }
+    else if (idx === oi && !isCorrect) { btn.style.borderColor = 'var(--danger)'; btn.style.background = '#ef444422'; }
+    else btn.style.opacity = '0.4';
+    btn.style.pointerEvents = 'none';
   });
+
+  // 완성된 문장 + 해설
+  const filledSentence = s.blank.replace(/_{3,}/, `<span style="color:var(--success); font-weight:700; border-bottom:2px solid var(--success);">${correctWord.chinese}</span>`);
+  const fb = document.getElementById('mock-feedback');
+  fb.style.display = 'block';
+  fb.innerHTML = `
+    <div style="background:var(--card); border-radius:12px; padding:14px; margin-top:12px;">
+      <div style="font-size:16px; font-weight:600; margin-bottom:8px; color:${isCorrect ? 'var(--success)' : 'var(--danger)'};">
+        ${isCorrect ? '정답!' : '오답'}
+      </div>
+      ${!isCorrect ? `<div style="font-size:13px; margin-bottom:6px;"><span style="color:var(--danger);">${labels[oi]} ${userWord.chinese}</span> → <span style="color:var(--success);">${labels[s.answer]} ${correctWord.chinese}</span></div>` : ''}
+      <div style="background:var(--bg); border-radius:8px; padding:10px; margin-top:8px;">
+        <div style="font-size:11px; color:var(--text2); margin-bottom:4px;">완성된 문장</div>
+        <div style="font-size:16px; line-height:1.6;">${filledSentence}</div>
+        <div style="font-size:13px; color:var(--warning); font-style:italic; margin-top:4px;">${toPinyin(s.blank.replace(/_{3,}/, correctWord.chinese))}</div>
+        <div style="font-size:13px; color:var(--text2); margin-top:4px;">${s.korean}</div>
+      </div>
+      <div style="background:var(--bg); border-radius:8px; padding:10px; margin-top:8px;">
+        <div style="font-size:11px; color:var(--text2); margin-bottom:4px;">단어 해설</div>
+        <div style="font-size:16px; font-weight:700;">${correctWord.chinese} <span style="font-size:13px; color:var(--warning);">${correctWord.pinyin}</span></div>
+        <div style="font-size:13px; color:var(--text);">${correctWord.meaning}</div>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="nextFillQuestion()">다음</button>
+    </div>`;
 }
 
-function checkMockFill() {
+function nextFillQuestion() {
+  mockState._fillIdx = (mockState._fillIdx || 0) + 1;
   const q = mockState.questions[mockState.current];
-  let correct = 0;
-  q.sentences.forEach((s, i) => { if (mockState._fillAnswers[i] === s.answer) correct++; });
-  const isCorrect = correct === q.sentences.length;
-  const userStr = mockState._fillAnswers.map(i => i >= 0 ? q.options[i]?.chinese : '?').join(', ');
-  const correctStr = q.sentences.map(s => q.options[s.answer]?.chinese).join(', ');
-  answerMockCommon(isCorrect, q, userStr, correctStr, correct + '/' + q.sentences.length + ' 맞음');
+  if (mockState._fillIdx >= q.sentences.length) {
+    mockState._fillIdx = 0;
+    mockState.current++;
+    renderMockQuestion();
+  } else {
+    renderReadingFill(q, document.getElementById('mock-content'), s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+  }
 }
 
 // --- Reading Sentence Order ---
