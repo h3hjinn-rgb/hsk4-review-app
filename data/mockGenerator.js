@@ -494,32 +494,32 @@
    * 접속사/시간 표현이 순서 단서 역할
    */
   const CONTEXT_BEFORE = [
-    (sent) => `因为最近比较忙。`,
-    (sent) => `虽然大家都不太同意。`,
-    (sent) => `他想了很长时间。`,
-    (sent) => `听了朋友的建议以后。`,
-    (sent) => `到了那儿以后。`,
-    (sent) => `一开始他不太习惯。`,
-    (sent) => `上个周末天气很好。`,
-    (sent) => `他在网上查了很多资料。`,
-    (sent) => `考虑了很久以后。`,
-    (sent) => `虽然他很累。`,
-    (sent) => `刚到中国的时候。`,
-    (sent) => `放假以前他就计划好了。`,
+    { zh: '因为最近比较忙。', ko: '최근에 좀 바빴기 때문에.' },
+    { zh: '虽然大家都不太同意。', ko: '비록 모두들 별로 동의하지 않았지만.' },
+    { zh: '他想了很长时间。', ko: '그는 오랫동안 생각했다.' },
+    { zh: '听了朋友的建议以后。', ko: '친구의 조언을 들은 후에.' },
+    { zh: '到了那儿以后。', ko: '거기에 도착한 후에.' },
+    { zh: '一开始他不太习惯。', ko: '처음에 그는 별로 익숙하지 않았다.' },
+    { zh: '上个周末天气很好。', ko: '지난 주말 날씨가 좋았다.' },
+    { zh: '他在网上查了很多资料。', ko: '그는 인터넷에서 자료를 많이 찾아봤다.' },
+    { zh: '考虑了很久以后。', ko: '오래 고민한 끝에.' },
+    { zh: '虽然他很累。', ko: '비록 그는 매우 피곤했지만.' },
+    { zh: '刚到中国的时候。', ko: '중국에 막 도착했을 때.' },
+    { zh: '放假以前他就计划好了。', ko: '방학 전에 이미 계획을 세워뒀다.' },
   ];
   const CONTEXT_AFTER = [
-    (sent) => `所以他觉得非常满意。`,
-    (sent) => `结果比他想象的还要好。`,
-    (sent) => `从那以后他就改变了想法。`,
-    (sent) => `大家都觉得他做得很对。`,
-    (sent) => `后来他把这件事告诉了朋友。`,
-    (sent) => `因此他决定以后继续这样做。`,
-    (sent) => `最后他终于成功了。`,
-    (sent) => `但是他还是觉得不够。`,
-    (sent) => `于是他又重新开始了。`,
-    (sent) => `这件事对他影响很大。`,
-    (sent) => `现在回想起来，他很感谢那次经历。`,
-    (sent) => `他希望下次能做得更好。`,
+    { zh: '所以他觉得非常满意。', ko: '그래서 그는 매우 만족했다.' },
+    { zh: '结果比他想象的还要好。', ko: '결과가 생각보다 더 좋았다.' },
+    { zh: '从那以后他就改变了想法。', ko: '그때부터 그는 생각을 바꿨다.' },
+    { zh: '大家都觉得他做得很对。', ko: '모두 그가 잘했다고 생각했다.' },
+    { zh: '后来他把这件事告诉了朋友。', ko: '나중에 그는 이 일을 친구에게 말했다.' },
+    { zh: '因此他决定以后继续这样做。', ko: '그래서 그는 앞으로도 계속 이렇게 하기로 했다.' },
+    { zh: '最后他终于成功了。', ko: '마침내 그는 결국 성공했다.' },
+    { zh: '但是他还是觉得不够。', ko: '하지만 그는 아직 부족하다고 느꼈다.' },
+    { zh: '于是他又重新开始了。', ko: '그래서 그는 다시 처음부터 시작했다.' },
+    { zh: '这件事对他影响很大。', ko: '이 일은 그에게 큰 영향을 미쳤다.' },
+    { zh: '现在回想起来，他很感谢那次经历。', ko: '지금 돌이켜보면, 그는 그 경험에 감사한다.' },
+    { zh: '他希望下次能做得更好。', ko: '그는 다음에 더 잘하길 바란다.' },
   ];
 
   /**
@@ -534,39 +534,34 @@
     const word = pickOne(pool);
 
     // 실제 예문을 가운데(2번째)에 두고, 앞뒤에 문맥 문장 배치
-    const before = pickOne(CONTEXT_BEFORE)(word.sentence.zh);
-    const middle = word.sentence.zh;
-    const after = pickOne(CONTEXT_AFTER)(word.sentence.zh);
-    const correctSentences = [before, middle, after];
+    const beforeCtx = pickOne(CONTEXT_BEFORE);
+    const afterCtx = pickOne(CONTEXT_AFTER);
+    const correctItems = [
+      { text: beforeCtx.zh, korean: beforeCtx.ko },
+      { text: word.sentence.zh, korean: word.sentence.ko },
+      { text: afterCtx.zh, korean: afterCtx.ko }
+    ];
 
     const labels = ['A', 'B', 'C'];
-    // 셔플해서 표시 (학생이 보는 순서)
     const displayOrder = shuffle([0, 1, 2]);
     const sentences = displayOrder.map((correctIdx, dispIdx) => ({
       label: labels[dispIdx],
-      text: correctSentences[correctIdx],
-      korean: '', // 정답 전에는 한국어 안 보임
+      text: correctItems[correctIdx].text,
+      korean: correctItems[correctIdx].korean,
       _correctPos: correctIdx
     }));
 
-    // 정답: 올바른 순서를 표시 라벨로 변환
     const answerArr = new Array(3);
     for (const s of sentences) {
       answerArr[s._correctPos] = s.label;
     }
     const answer = answerArr.join('');
 
-    // 해설: 올바른 순서 + 각 문장 해석
-    const explanationParts = answerArr.map((label, pos) => {
-      const sent = sentences.find(s => s.label === label);
-      return `${pos + 1}. ${label}: ${sent.text}`;
-    });
-
     return {
       type: 'sentence_order',
-      sentences: sentences.map(s => ({ label: s.label, text: s.text })),
+      sentences: sentences.map(s => ({ label: s.label, text: s.text, korean: s.korean })),
       answer: answer,
-      explanation: `올바른 순서: ${answer}\n${explanationParts.join('\n')}\n\n핵심 단어: ${word.chinese}(${word.pinyin}) = ${word.meaning}`,
+      explanation: '',
       word: word
     };
   }
