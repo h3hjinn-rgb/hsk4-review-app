@@ -3637,20 +3637,22 @@ function checkSentOrder() {
 }
 
 // --- TTS ---
-function playMockTTS() {
+function playMockTTS(forceReplay) {
   const el = document.getElementById('mock-tts-text');
-  if (!el || mockState._played) return;
-  mockState._played = true;
+  if (!el) return;
+  if (mockState._played && !forceReplay) return;
+  if (!forceReplay) mockState._played = true;
   const text = el.dataset.text;
   const btn = document.getElementById('mock-play-btn');
-  if (btn) { btn.style.opacity = '0.5'; btn.textContent = '🔊 재생 중...'; btn.style.pointerEvents = 'none'; }
+  if (btn && !forceReplay) { btn.style.opacity = '0.5'; btn.textContent = '재생 중...'; btn.style.pointerEvents = 'none'; }
   if ('speechSynthesis' in window) {
+    speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'zh-CN';
     utter.rate = 0.9;
     const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('zh'));
     if (voices.length > 0) utter.voice = voices[0];
-    utter.onend = () => { if (btn) btn.textContent = '🔊 재생 완료'; };
+    utter.onend = () => { if (btn && !forceReplay) btn.textContent = '재생 완료'; };
     speechSynthesis.speak(utter);
   } else {
     toast('TTS를 지원하지 않는 브라우저입니다');
@@ -3696,14 +3698,30 @@ function answerMockCommon(isCorrect, q, userAnswer, correctAnswer, extra) {
     </div>`;
   }
 
+  // 듣기 문제: 원문 + 해석 + 다시 듣기
+  let listeningDetail = '';
+  if (q.type === 'ox' || q.type === 'dialogue') {
+    const audioText = q.audio || q.ttsText || '';
+    listeningDetail = `
+      <div style="background:var(--bg); border-radius:8px; padding:10px; margin-top:8px;">
+        <div style="font-size:11px; color:var(--text2); margin-bottom:4px;">원문</div>
+        <div style="font-size:15px; line-height:1.6;">${audioText.replace(/\n/g, '<br>')}</div>
+        <div style="font-size:13px; color:var(--warning); font-style:italic; margin-top:4px;">${toPinyin(audioText.replace(/[AB]:\s?/g, ''))}</div>
+        ${q.korean ? `<div style="font-size:13px; color:var(--text2); margin-top:4px;">${q.korean}</div>` : ''}
+        ${q.type === 'dialogue' && q.explanation ? `<div style="font-size:12px; color:var(--text2); margin-top:4px; white-space:pre-line;">${q.explanation}</div>` : ''}
+        <button class="btn" onclick="playMockTTS(true)" style="margin-top:8px; background:var(--card2); color:var(--text); border:none; padding:6px 14px; border-radius:8px; font-size:13px; cursor:pointer;">다시 듣기</button>
+      </div>`;
+  }
+
   fb.innerHTML = `
     <div style="background:var(--card); border-radius:12px; padding:14px; margin-top:12px;">
       <div style="font-size:16px; font-weight:600; margin-bottom:8px; color:${isCorrect ? 'var(--success)' : 'var(--danger)'};">
         ${isCorrect ? '정답!' : '오답'}${extra ? ' (' + extra + ')' : ''}
       </div>
       ${!isCorrect ? `<div style="font-size:13px; margin-bottom:4px;"><span style="color:var(--danger);">내 답: ${userAnswer}</span> → <span style="color:var(--success);">정답: ${correctAnswer}</span></div>` : ''}
-      ${q.explanation ? `<div style="font-size:13px; color:var(--text2); margin-top:6px;">${q.explanation}</div>` : ''}
+      ${q.type === 'ox' && q.explanation ? `<div style="font-size:13px; color:var(--text2); margin-top:6px;">${q.explanation}</div>` : ''}
       ${q.type === 'order' ? `<div style="font-size:16px; color:var(--success); margin-top:8px;">${q.answer.join('')}</div><div style="font-size:13px; color:var(--warning); font-style:italic;">${toPinyin(q.answer.join(''))}</div><div style="font-size:13px; color:var(--text2);">${q.korean}</div>` : ''}
+      ${listeningDetail}
       ${wordDetail}
       <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="nextMockQuestion()">다음</button>
     </div>`;

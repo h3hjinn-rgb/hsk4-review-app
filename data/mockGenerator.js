@@ -186,7 +186,8 @@
 
   /**
    * Type A: True/False (O/X 판단)
-   * Pick a word's sentence, create a statement that is true or false.
+   * 원문을 TTS로 들려주고, 다른 표현으로 서술한 문장이 내용과 일치하는지 판단.
+   * 원문이 그대로 나오지 않고, 의미를 바꿔 서술한 별도의 문장이 제시됨.
    */
   function generateOXQuestion(hskWords) {
     const candidates = wordsWithSentences(hskWords);
@@ -197,31 +198,58 @@
 
     let statement, explanation;
 
+    // 서술문 생성용 패턴들 (원문의 핵심 내용을 다른 표현으로)
+    const subjectPatterns = ['他', '她', '他们', '这个人'];
+    const subject = pickOne(subjectPatterns);
+
     if (isTrue) {
-      // True: rephrase using the Korean meaning as basis
-      statement = sentence; // Use the original sentence as the statement
-      explanation = `원문과 같은 내용입니다. "${sentence}" (${korean})`;
+      // True: 원문 내용을 다른 표현으로 올바르게 서술
+      // 핵심 단어의 의미를 활용해서 서술문 생성
+      const stmtTemplates = [
+        () => `${subject}提到了${word.chinese}。`,
+        () => `这句话跟${word.chinese}有关。`,
+        () => `${subject}说的是关于${word.chinese}的事。`,
+      ];
+      // 문장에서 핵심 동작/상태를 추출하여 서술
+      if (sentence.includes('不') || sentence.includes('没')) {
+        statement = `${subject}表示否定的意思。`;
+      } else if (sentence.includes('想') || sentence.includes('要')) {
+        statement = `${subject}想${word.chinese}。`;
+      } else if (sentence.includes('喜欢') || sentence.includes('爱')) {
+        statement = `${subject}喜欢${word.chinese}。`;
+      } else if (sentence.includes('可以') || sentence.includes('能')) {
+        statement = `${subject}觉得可以${word.chinese}。`;
+      } else if (word.pos === '형용사') {
+        statement = `${subject}觉得${word.chinese}。`;
+      } else if (word.pos === '명사') {
+        statement = `这句话提到了${word.chinese}。`;
+      } else {
+        // 일반: 핵심 단어가 문장에 등장하는지로 판단
+        statement = `这句话的内容跟"${word.chinese}"有关系。`;
+      }
+      explanation = `원문: "${sentence}" (${korean})\n서술문이 원문의 내용과 일치합니다. "${word.chinese}" = ${word.meaning}`;
     } else {
-      // False: replace the key word with a different word of similar type
+      // False: 핵심 단어를 다른 단어로 바꿔서 틀린 서술 생성
       const samePos = candidates.filter(
         w => w.pos === word.pos && w.id !== word.id && w.level <= word.level + 1
       );
       if (samePos.length > 0) {
         const replacement = pickOne(samePos);
-        // Replace the word in the sentence
-        statement = sentence.replace(word.chinese, replacement.chinese);
-        if (statement === sentence) {
-          // Word wasn't found directly, fall back to using the replacement's sentence
-          statement = replacement.sentence.zh;
+        // 틀린 서술문: 원문의 핵심 단어를 다른 단어로 대체
+        if (word.pos === '형용사') {
+          statement = `${subject}觉得${replacement.chinese}。`;
+        } else if (word.pos === '명사') {
+          statement = `这句话提到了${replacement.chinese}。`;
+        } else if (word.pos === '동사' || word.pos === '이합동사') {
+          statement = `${subject}${replacement.chinese}了。`;
+        } else {
+          statement = `这句话的内容跟"${replacement.chinese}"有关系。`;
         }
-        explanation = `원문: "${sentence}" (${korean}). 제시문에서 "${word.chinese}"(${word.meaning})이/가 "${replacement.chinese}"(${replacement.meaning})(으)로 바뀌었습니다.`;
+        explanation = `원문: "${sentence}" (${korean})\n원문은 "${word.chinese}"(${word.meaning})에 관한 내용이지만, 서술문은 "${replacement.chinese}"(${replacement.meaning})(이)라고 했으므로 틀립니다.`;
       } else {
-        // Fallback: negate
-        statement = sentence.replace('很', '不').replace('是', '不是');
-        if (statement === sentence) {
-          statement = '不' + sentence;
-        }
-        explanation = `원문: "${sentence}" (${korean}). 제시문은 부정형으로 바뀌었습니다.`;
+        // Fallback: 반대 의미로 서술
+        statement = `${subject}不喜欢${word.chinese}。`;
+        explanation = `원문: "${sentence}" (${korean})\n서술문이 원문과 반대 의미입니다.`;
       }
     }
 
@@ -238,40 +266,66 @@
   }
 
   /**
+   * 자연스러운 대화 템플릿 (질문-대답 패턴)
+   */
+  const DIALOGUE_TEMPLATES = [
+    { askPat: /吃|喝|菜|饭/, ask: (w) => `你想吃什么？`, resp: (w) => `我想吃${w.sentence.zh.includes('吃') ? w.sentence.zh.split('吃')[1]?.replace('。','') || w.chinese : w.chinese}。` },
+    { askPat: /去|来|走/, ask: (w) => `你今天去哪儿？`, resp: (w) => w.sentence.zh },
+    { askPat: /买|卖|商店|超市/, ask: (w) => `你要买什么？`, resp: (w) => w.sentence.zh },
+    { askPat: /工作|公司|上班/, ask: (w) => `你在哪儿工作？`, resp: (w) => w.sentence.zh },
+    { askPat: /学|考试|课/, ask: (w) => `最近学习怎么样？`, resp: (w) => w.sentence.zh },
+    { askPat: /天气|冷|热|下雨/, ask: (w) => `今天天气怎么样？`, resp: (w) => w.sentence.zh },
+    { askPat: /医院|病|药|身体/, ask: (w) => `你身体怎么样？`, resp: (w) => w.sentence.zh },
+    { askPat: /喜欢|爱|觉得/, ask: (w) => `你觉得怎么样？`, resp: (w) => w.sentence.zh },
+  ];
+
+  /**
    * Type B: Short dialogue + 4 choices
-   * Combine 2 words' sentences into a short dialogue.
+   * 자연스러운 질문-대답 패턴의 대화 생성
    */
   function generateDialogueQuestion(hskWords) {
     const candidates = wordsWithSentences(hskWords);
 
-    // Try to pick two related words (same topic)
-    const w1 = pickOne(candidates);
-    const topic1 = getWordTopic(w1);
-    let sameTopic = candidates.filter(w => w.id !== w1.id && getWordTopic(w) === topic1);
-    if (sameTopic.length === 0) sameTopic = candidates.filter(w => w.id !== w1.id);
-    const w2 = pickOne(sameTopic);
+    // 대화 템플릿에 맞는 단어 찾기
+    let w2 = null, template = null;
+    const shuffledCandidates = shuffle(candidates);
+    for (const c of shuffledCandidates) {
+      const sent = c.sentence.zh;
+      const matched = DIALOGUE_TEMPLATES.find(t => t.askPat.test(sent));
+      if (matched) { w2 = c; template = matched; break; }
+    }
+    // Fallback: 일반 대화
+    if (!w2) {
+      w2 = pickOne(candidates);
+    }
 
-    const lineA = w1.sentence.zh;
-    const lineB = w2.sentence.zh;
-    const audio = `A: ${lineA}\nB: ${lineB}`;
+    // A의 질문 생성
+    let lineA, lineB;
+    if (template) {
+      lineA = template.ask(w2);
+      lineB = template.resp(w2);
+    } else {
+      // Fallback: 일반적인 질문-대답
+      const askTemplates = ['你知道吗？', '怎么了？', '最近怎么样？', '你说什么？'];
+      lineA = pickOne(askTemplates);
+      lineB = w2.sentence.zh;
+    }
 
-    // Question templates about the dialogue
+    const audio = `${lineA} ${lineB}`;
+
+    // 질문: B의 대답 내용에 관한 문제
     const questionTemplates = [
-      { q: '关于对话，下面哪个是对的？', qKo: '대화에 대해 맞는 것은?' },
-      { q: 'B说了什么？', qKo: 'B가 무슨 말을 했나요?' },
-      { q: '这段对话的内容是什么？', qKo: '이 대화의 내용은 무엇인가요?' },
+      { q: '根据对话，下面哪个是对的？', qKo: '대화 내용과 일치하는 것은?' },
+      { q: '男的/女的说了什么？', qKo: '상대방이 무슨 말을 했나요?' },
+      { q: '从对话中可以知道什么？', qKo: '대화에서 알 수 있는 것은?' },
     ];
-    const template = pickOne(questionTemplates);
+    const qTemplate = pickOne(questionTemplates);
 
-    // Correct answer is about B's sentence meaning
     const correctOption = w2.sentence.ko;
-
-    // Wrong options: pick 3 other words' Korean meanings
-    const others = candidates.filter(w => w.id !== w1.id && w.id !== w2.id);
+    const others = candidates.filter(w => w.id !== w2.id);
     const wrongWords = pickRandom(others, 3);
     const wrongOptions = wrongWords.map(w => w.sentence.ko);
 
-    // Assemble options and track correct index
     const allOptions = [correctOption, ...wrongOptions];
     const shuffledOptions = shuffle(allOptions);
     const answerIdx = shuffledOptions.indexOf(correctOption);
@@ -279,14 +333,13 @@
     return {
       type: 'dialogue',
       audio: audio,
-      ttsText: `${lineA} ${lineB}`,
-      question: template.q,
-      questionKo: template.qKo,
+      ttsText: audio,
+      question: qTemplate.q,
+      questionKo: qTemplate.qKo,
       options: shuffledOptions,
       answer: answerIdx,
-      explanation: `A: ${lineA} (${w1.sentence.ko})\nB: ${lineB} (${w2.sentence.ko})\n정답: "${correctOption}"`,
-      wordA: w1,
-      wordB: w2
+      explanation: `A: ${lineA}\nB: ${lineB} (${w2.sentence.ko})\n정답: "${correctOption}"`,
+      word: w2
     };
   }
 
