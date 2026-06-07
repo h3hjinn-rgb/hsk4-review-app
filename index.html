@@ -3990,7 +3990,7 @@ if ('serviceWorker' in navigator) {
   }).catch(() => {});
   // Purge old caches
   if (window.caches) {
-    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v18') caches.delete(k); }));
+    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v19') caches.delete(k); }));
   }
 }
 </script>

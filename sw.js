@@ -1,10 +1,11 @@
-const CACHE_NAME = 'hsk4-v18';
+const CACHE_NAME = 'hsk4-v19';
 const ASSETS = [
   '/',
   '/index.html',
   '/data/testSets.json',
   '/data/secretNotes.json',
-  '/data/hskWords.json'
+  '/data/hskWords.json',
+  '/data/mockGenerator.js'
 ];
 
 self.addEventListener('install', e => {
