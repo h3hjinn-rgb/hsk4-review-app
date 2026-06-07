@@ -9,6 +9,7 @@
 <title>HSK 4 Review</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3/dist/index.js"></script>
+<script src="data/mockGenerator.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
@@ -397,6 +398,92 @@ body {
   transition: left .2s;
 }
 .toggle.on::after { left: 24px; }
+
+/* Today cards */
+.today-card {
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: transform .15s, opacity .3s;
+  position: relative;
+  overflow: hidden;
+}
+.today-card:active { transform: scale(0.98); }
+.today-card .card-done-check {
+  position: absolute; top: 12px; right: 12px;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: #fff;
+  transition: all .3s;
+}
+.today-card.done .card-done-check {
+  background: var(--success);
+  color: #fff;
+}
+.today-card.done {
+  opacity: 0.6;
+}
+.today-card.done::after {
+  content: '완료';
+  position: absolute; top: 12px; right: 48px;
+  font-size: 11px; color: var(--success);
+  font-weight: 600;
+}
+
+/* Free study grid */
+.free-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.free-grid .card {
+  padding: 14px 12px;
+  margin-bottom: 0;
+  text-align: center;
+}
+.free-grid .card .card-title { font-size: 14px; }
+.free-grid .card .card-sub { font-size: 11px; }
+
+/* Stat bar */
+.stat-bar {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.stat-bar .stat-bar-label {
+  font-size: 13px; color: var(--text2); min-width: 32px;
+}
+.stat-bar .stat-bar-track {
+  flex: 1; height: 8px; background: #333;
+  border-radius: 4px; overflow: hidden;
+}
+.stat-bar .stat-bar-fill {
+  height: 100%; border-radius: 4px; transition: width .5s;
+}
+.stat-bar .stat-bar-val {
+  font-size: 12px; color: var(--text2); min-width: 36px; text-align: right;
+}
+
+/* More study panel */
+.more-study-panel {
+  display: none;
+  margin-bottom: 16px;
+}
+.more-study-panel.show {
+  display: block;
+}
+
+/* Today progress bar */
+.today-progress-bar {
+  height: 8px; background: #333; border-radius: 4px;
+  overflow: hidden; margin-top: 8px;
+}
+.today-progress-fill {
+  height: 100%; background: var(--success); border-radius: 4px;
+  transition: width .5s;
+}
 </style>
 </head>
 <body>
@@ -407,86 +494,140 @@ body {
   <div id="page-home" class="page active">
     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
       <div class="page-header" style="margin-bottom:8px;">
-        HSK 4급 복습
-        <small>IBT 시험 대비 - 출퇴근길 복습용</small>
+        HSK 4급 시험 대비
+        <small>매일 학습 플랜</small>
       </div>
       <button id="dday-btn" style="background:var(--accent); color:white; border:none; border-radius:10px; padding:6px 12px; font-size:13px; font-weight:700; cursor:pointer; margin-top:8px; white-space:nowrap;" onclick="promptExamDate()">
         D-?
       </button>
     </div>
 
-    <!-- Today's summary -->
-    <div id="home-today-summary" style="background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius:var(--radius); padding:14px 16px; margin-bottom:14px; border:1px solid #333;">
-      <div style="font-size:12px; color:var(--text2); margin-bottom:8px;">오늘의 학습</div>
-      <div style="display:flex; gap:8px;" id="home-todo-items"></div>
-    </div>
-
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-value" id="stat-streak">0</div>
-        <div class="stat-label">연속 학습</div>
+    <!-- Section 1: 오늘의 학습 progress -->
+    <div style="background: var(--card); border-radius:var(--radius); padding:14px 16px; margin-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:15px; font-weight:600;" id="today-progress-label">오늘의 학습 0/6 완료</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-today">0</div>
-        <div class="stat-label">오늘 복습</div>
+      <div class="today-progress-bar">
+        <div class="today-progress-fill" id="today-progress-fill" style="width:0%;"></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-mastered">0</div>
-        <div class="stat-label">완전 암기</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-review">0</div>
-        <div class="stat-label">복습 필요</div>
+      <div style="display:flex; gap:12px; margin-top:10px; font-size:12px; color:var(--text2);">
+        <span id="stat-streak">연속 0일</span>
+        <span>·</span>
+        <span id="stat-today">오늘 0문제</span>
+        <span>·</span>
+        <span id="stat-dday-small">D-0</span>
       </div>
     </div>
 
-    <div class="card" onclick="showPage('vocab')" style="background: linear-gradient(135deg, #0f3460, #533483);">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div class="card-title" style="font-size: 18px;">단어 학습</div>
-          <div class="card-sub" style="color: #ddd;" id="home-vocab-desc">14일 플랜 - 예문 빈칸 채우기</div>
-        </div>
-        <div style="font-size:12px; color:#aaa;" id="home-vocab-progress"></div>
-      </div>
+    <!-- Section 2: 취약 단어 복습 -->
+    <div class="today-card" id="today-weak-card" data-done="false" onclick="startWeakReview()" style="background: linear-gradient(135deg, #4a1942, #e94560);">
+      <div class="card-done-check">-</div>
+      <div class="card-title" style="font-size:17px; color:#fff;">취약 단어 복습</div>
+      <div class="card-sub" style="color:rgba(255,255,255,0.75);" id="home-weak-info">오답률 높은 단어 50개</div>
+      <button id="weak-review-again-btn" class="btn" onclick="event.stopPropagation(); startWeakReview();" style="display:none; margin-top:10px; background:rgba(255,255,255,0.2); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:13px; cursor:pointer;">한번더 복습하기</button>
     </div>
-    <div class="card" onclick="showPage('test')">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div class="card-title">문장 테스트</div>
-          <div class="card-sub">38세트 - 빈칸에 중국어 채우기</div>
-        </div>
-        <div style="font-size:12px; color:var(--text2);" id="home-quest-status"></div>
-      </div>
+
+    <!-- Section 3: 모의고사 - 듣기 -->
+    <div class="today-card" id="today-listening-card" data-done="false" onclick="startMockTest('listening')" style="background: linear-gradient(135deg, #0f3460, #1a1a4e);">
+      <div class="card-done-check">-</div>
+      <div style="font-size:28px; margin-bottom:6px;">🔊</div>
+      <div class="card-title" style="font-size:17px; color:#fff;">모의고사 - 듣기</div>
+      <div class="card-sub" style="color:rgba(255,255,255,0.7);">10문제 · 약 10분</div>
     </div>
-    <div class="card" onclick="showPage('audio')">
-      <div class="card-title">듣기 연습</div>
-      <div class="card-sub">급수별 단어장 MP3 듣기</div>
+
+    <!-- Section 4: 모의고사 - 쓰기 -->
+    <div class="today-card" id="today-writing-card" data-done="false" onclick="startMockTest('writing')" style="background: linear-gradient(135deg, #1a3a2a, #2d5a3d);">
+      <div class="card-done-check">-</div>
+      <div class="card-title" style="font-size:17px; color:#fff;">모의고사 - 쓰기</div>
+      <div class="card-sub" style="color:rgba(255,255,255,0.7);">10문제 · 약 12분</div>
     </div>
-    <div class="card" onclick="showPage('typing')">
-      <div class="card-title">타이핑 연습</div>
-      <div class="card-sub">IBT 대비 중국어 입력 · 어순 배열</div>
+
+    <!-- Section 5: 모의고사 - 독해 -->
+    <div class="today-card" id="today-reading-card" data-done="false" onclick="startMockTest('reading')" style="background: linear-gradient(135deg, #3a2a1a, #5a4a2d);">
+      <div class="card-done-check">-</div>
+      <div class="card-title" style="font-size:17px; color:#fff;">모의고사 - 독해</div>
+      <div class="card-sub" style="color:rgba(255,255,255,0.7);">10문제 · 약 12분</div>
     </div>
-    <div class="card" onclick="showPage('notes')">
-      <div class="card-title">비밀노트</div>
-      <div class="card-sub">22개 카테고리 - 핵심 단어 220개</div>
-    </div>
-    <div class="card" style="background: linear-gradient(135deg, #4a1942, #e94560); padding: 12px 16px;">
-      <div class="card-title" style="font-size: 16px; margin-bottom: 10px;">스마트 복습</div>
-      <div style="display:flex; gap:8px;">
-        <button class="btn" onclick="startUnfamiliarReview()" style="flex:1; background:rgba(255,255,255,0.15); color:#fff; border:none; padding:10px 8px; border-radius:8px; font-size:13px; cursor:pointer;">
-          <div style="font-size:16px; margin-bottom:2px;">4급 낯선 단어</div>
-          <div style="font-size:11px; color:#ddd;" id="home-unfamiliar-count">적게 본 단어 위주</div>
-        </button>
-        <button class="btn" onclick="startWeakReview()" style="flex:1; background:rgba(255,255,255,0.15); color:#fff; border:none; padding:10px 8px; border-radius:8px; font-size:13px; cursor:pointer;">
-          <div style="font-size:16px; margin-bottom:2px;">취약 단어</div>
-          <div style="font-size:11px; color:#ddd;" id="home-weak-count">오답률 높은 단어</div>
-        </button>
-      </div>
-    </div>
-    <div class="card" onclick="showPage('wrong')" style="border:1px solid var(--danger)33;">
-      <div class="card-title" style="color:var(--danger);">틀린 문제 모아보기</div>
+
+    <!-- Section 6: 오답 복습 -->
+    <div class="today-card" id="today-wrong-card" data-done="false" onclick="showPage('wrong')" style="background: var(--card); border:1px solid rgba(248,113,113,0.2);">
+      <div class="card-done-check">-</div>
+      <div class="card-title" style="color:var(--danger);">오답 복습</div>
       <div class="card-sub" id="home-wrong-count">0개</div>
     </div>
+
+    <!-- Divider -->
+    <div style="border-top:1px solid #333; margin:16px 0;"></div>
+
+    <!-- Section 7: 더 공부하기 -->
+    <button class="btn btn-outline btn-block" onclick="showMoreStudy()" style="margin-bottom:16px; font-size:14px;">+ 더 공부하기</button>
+
+    <!-- Section 8: 자유 학습 (expandable) -->
+    <div class="more-study-panel" id="more-study-panel">
+      <div style="font-size:13px; color:var(--text2); margin-bottom:8px;">자유 학습</div>
+      <div class="free-grid">
+        <div class="card" onclick="showPage('pos-study')">
+          <div class="card-title">품사별 집중학습</div>
+          <div class="card-sub">품사별로 나눠 학습</div>
+        </div>
+        <div class="card" onclick="showPage('test')">
+          <div class="card-title">문장 테스트</div>
+          <div class="card-sub">빈칸 채우기</div>
+        </div>
+        <div class="card" onclick="showPage('audio')">
+          <div class="card-title">듣기 연습</div>
+          <div class="card-sub">MP3 듣기</div>
+        </div>
+        <div class="card" onclick="showPage('typing')">
+          <div class="card-title">타이핑 연습</div>
+          <div class="card-sub">중국어 입력</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 9: 내 현황 -->
+    <div style="background: var(--card); border-radius:var(--radius); padding:16px; margin-bottom:12px;">
+      <div style="font-size:15px; font-weight:600; margin-bottom:14px;">내 현황</div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:13px; color:var(--text2); margin-bottom:10px;">파트별 정답률</div>
+        <div class="stat-bar" id="mock-stat-listening">
+          <span class="stat-bar-label">듣기</span>
+          <div class="stat-bar-track"><div class="stat-bar-fill" style="width:0%; background:var(--accent2);"></div></div>
+          <span class="stat-bar-val">0%</span>
+        </div>
+        <div class="stat-bar" id="mock-stat-reading">
+          <span class="stat-bar-label">독해</span>
+          <div class="stat-bar-track"><div class="stat-bar-fill" style="width:0%; background:var(--warning);"></div></div>
+          <span class="stat-bar-val">0%</span>
+        </div>
+        <div class="stat-bar" id="mock-stat-writing">
+          <span class="stat-bar-label">쓰기</span>
+          <div class="stat-bar-track"><div class="stat-bar-fill" style="width:0%; background:var(--success);"></div></div>
+          <span class="stat-bar-val">0%</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:12px;">
+        <div style="flex:1; text-align:center; padding:10px; background:var(--bg); border-radius:12px;">
+          <div style="font-size:22px; font-weight:700; color:var(--success);" id="stat-mastered">0</div>
+          <div style="font-size:11px; color:var(--text2);">완전 암기</div>
+        </div>
+        <div style="flex:1; text-align:center; padding:10px; background:var(--bg); border-radius:12px;">
+          <div style="font-size:22px; font-weight:700; color:var(--warning);" id="stat-review">0</div>
+          <div style="font-size:11px; color:var(--text2);">복습 필요</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mock Test Page -->
+  <div id="page-mocktest" class="page">
+    <button class="back-btn" id="mock-back-btn" onclick="if(confirm('모의고사를 종료할까요?')) showPage('home');">&lt; 뒤로</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <div class="page-header" id="mock-header" style="margin-bottom:0;">모의고사</div>
+      <span style="font-size:13px; color:var(--text2);" id="mock-counter">0/10</span>
+    </div>
+    <div class="progress-bar" style="margin-bottom:16px;"><div class="progress-fill" id="mock-progress"></div></div>
+    <div id="mock-content"></div>
   </div>
 
   <!-- Test Page -->
@@ -945,19 +1086,30 @@ function updateDday() {
 }
 
 function updateHomeStats() {
-  document.getElementById('stat-streak').textContent = stats.streak;
-  document.getElementById('stat-today').textContent = stats.todayCount;
-  document.getElementById('stat-mastered').textContent = getMasteredCount();
+  const streakEl = document.getElementById('stat-streak');
+  if (streakEl) streakEl.textContent = '연속 ' + stats.streak + '일';
+  const todayEl = document.getElementById('stat-today');
+  if (todayEl) todayEl.textContent = '오늘 ' + stats.todayCount + '문제';
+  const masteredEl = document.getElementById('stat-mastered');
+  if (masteredEl) masteredEl.textContent = getMasteredCount();
   const due = getDueWords().length;
-  document.getElementById('stat-review').textContent = due;
+  const reviewEl = document.getElementById('stat-review');
+  if (reviewEl) reviewEl.textContent = due;
 
   updateDday();
-  updateHomeTodoSummary();
+  updateTodayProgress();
+  updateMockStats();
 
-  // Update smart review counts
-  const weakEl = document.getElementById('home-weak-count');
-  const unfamiliarEl = document.getElementById('home-unfamiliar-count');
-  if (weakEl) {
+  // Update wrong count on home
+  const wrongCountEl = document.getElementById('home-wrong-count');
+  if (wrongCountEl) {
+    const wrongItems = getWrongItems().filter(x => !x.resolved);
+    wrongCountEl.textContent = wrongItems.length > 0 ? wrongItems.length + '개' : '없음';
+  }
+
+  // Update weak word info
+  const weakInfoEl = document.getElementById('home-weak-info');
+  if (weakInfoEl && hskWords.length > 0) {
     const weakCount = hskWords.filter(w => {
       if (!w.sentence || w.level <= 2) return false;
       const s = getVocabSRS(w.id);
@@ -965,53 +1117,19 @@ function updateHomeStats() {
       if (total === 0) return false;
       return s.wrong / total > 0.3 || s.avgTime >= 8000 || s.level <= 2;
     }).length;
-    weakEl.textContent = weakCount > 0 ? weakCount + '개 취약' : '오답률 높은 단어';
-  }
-  if (unfamiliarEl) {
-    const unfamiliarCount = hskWords.filter(w => {
-      if (!w.sentence || w.level !== 4) return false;
-      const s = getVocabSRS(w.id);
-      return (s.correct + s.wrong) <= 2;
-    }).length;
-    unfamiliarEl.textContent = unfamiliarCount > 0 ? unfamiliarCount + '개 남음' : '적게 본 단어 위주';
-  }
-}
-
-function updateHomeTodoSummary() {
-  const container = document.getElementById('home-todo-items');
-  if (!container) return;
-
-  // Vocab session status
-  const vocabDone = [1,2,3,4,5].filter(id => isSessionDone(id)).length;
-  // Daily quest status
-  const dq = getDailyQuest();
-  const questDone = dq ? dq.completed : 0;
-
-  container.innerHTML = `
-    <div style="flex:1; text-align:center; padding:8px; background:var(--card); border-radius:10px;">
-      <div style="font-size:18px; font-weight:700; color:${vocabDone >= 5 ? 'var(--success)' : 'var(--accent)'};">${vocabDone}/5</div>
-      <div style="font-size:11px; color:var(--text2);">단어 세션</div>
-    </div>
-    <div style="flex:1; text-align:center; padding:8px; background:var(--card); border-radius:10px;">
-      <div style="font-size:18px; font-weight:700; color:${questDone >= 5 ? 'var(--success)' : 'var(--accent)'};">${questDone}/5</div>
-      <div style="font-size:11px; color:var(--text2);">문장 퀘스트</div>
-    </div>
-    <div style="flex:1; text-align:center; padding:8px; background:var(--card); border-radius:10px;">
-      <div style="font-size:18px; font-weight:700; color:var(--warning);">${stats.todayCount}</div>
-      <div style="font-size:11px; color:var(--text2);">총 복습</div>
-    </div>
-  `;
-
-  // Home card subtexts
-  const vocabProgress = document.getElementById('home-vocab-progress');
-  if (vocabProgress && hskWords.length > 0) {
-    const learned = hskWords.filter(w => { const s = getVocabSRS(w.id); return s.correct > 0 || s.wrong > 0; }).length;
-    vocabProgress.textContent = `${learned}/${hskWords.length}`;
+    weakInfoEl.textContent = weakCount > 0 ? '오답률 높은 단어 ' + weakCount + '개' : '오답률 높은 단어 50개';
   }
 
-  const questStatus = document.getElementById('home-quest-status');
-  if (questStatus) {
-    questStatus.textContent = dq ? `오늘 ${questDone}/5` : '';
+  // Update D-day small text
+  const ddaySmall = document.getElementById('stat-dday-small');
+  if (ddaySmall) {
+    const examDate = getExamDate();
+    if (examDate) {
+      const exam = new Date(examDate + 'T00:00:00');
+      const now = new Date(); now.setHours(0,0,0,0);
+      const diff = Math.ceil((exam - now) / 86400000);
+      ddaySmall.textContent = diff > 0 ? 'D-' + diff : diff === 0 ? 'D-DAY' : '시험 완료';
+    }
   }
 }
 
@@ -1023,7 +1141,7 @@ function showPage(pageId) {
   if (!el) { document.getElementById('page-home').classList.add('active'); pageId = 'home'; }
   else el.classList.add('active');
   // Map sub-pages to parent nav items
-  const navMap = { vocabsession: 'vocab', quiz: 'test', flashcard: 'notes', wordquiz: 'notes', daily: 'home', typing: 'home', wrong: 'home' };
+  const navMap = { vocabsession: 'vocab', quiz: 'test', flashcard: 'notes', wordquiz: 'notes', daily: 'home', typing: 'home', wrong: 'home', mocktest: 'home' };
   const navPage = navMap[pageId] || pageId;
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.page === navPage);
@@ -1565,7 +1683,7 @@ function renderFlashcard() {
   container.innerHTML = `
     <div class="flashcard" id="fc-card">
       <div><span class="srs-dot ${srsClass}"></span><span style="font-size:11px;color:var(--text2);">Lv.${srs.level}</span></div>
-      ${isIhap(w) ? '<div style="margin-bottom:4px;"><span style="font-size:10px;padding:2px 8px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사</span></div>' : ''}
+      ${fcState.revealed && isIhap(w) ? '<div style="margin-bottom:4px;"><span style="font-size:10px;padding:2px 8px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사</span></div>' : ''}
       <div class="chinese">${w.chinese}</div>
       ${(showPinyin || fcState.revealed) ? `<div class="pinyin">${w.pinyin}</div>` : ''}
       <div class="${fcState.revealed ? 'revealed' : 'hidden'}">
@@ -3151,12 +3269,11 @@ function renderVocabQuestion() {
     <div class="sq-ko">${esc(sent.ko)}</div>
     <div class="sq-sentence">${esc(sent.blank).replace('___', '<span class="sq-blank" id="sq-blank">\u3000\u3000</span>')}</div>
     <div id="vs-sentence-pinyin" style="font-size:13px; color:var(--warning); text-align:center; margin-bottom:12px; font-style:italic; display:none;">${toPinyin(sent.zh)}</div>
-    ${isIhap(w) ? `<div style="text-align:center;margin-bottom:8px;"><span style="font-size:11px;padding:3px 10px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사 離合動詞</span></div>` : ''}
+    <div id="vs-ihap-badge" style="text-align:center;margin-bottom:8px;display:none;"><span style="font-size:11px;padding:3px 10px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사 離合動詞</span></div>
     <div class="mc-grid" id="mc-grid">
       ${options.map(o => `
-        <button class="mc-option" data-id="${o.id}" data-correct="${o.id === w.id}" data-word-id="${w.id}">
+        <button class="mc-option" data-id="${o.id}" data-correct="${o.id === w.id}" data-word-id="${w.id}" data-ihap="${isIhap(o)}">
           ${esc(o.chinese)}
-          ${isIhap(o) ? '<div style="font-size:9px;color:#f472b6;font-weight:700;">이합</div>' : ''}
           <div class="mc-pinyin">${esc(o.pinyin)}</div>
           <div class="mc-meaning">${esc(o.meaning)}</div>
         </button>
@@ -3205,7 +3322,13 @@ function answerVocab(el, isCorrect, wordId) {
     blank.classList.add(isCorrect ? 'filled' : 'wrong-fill');
   }
 
-  // 이합동사: highlight + explanation
+  // 이합동사: 정답 확인 후에만 표시
+  const ihapBadge = document.getElementById('vs-ihap-badge');
+  if (ihapBadge && isIhap(w)) ihapBadge.style.display = 'block';
+  // 선택지에 이합 표시 추가 (정답 후)
+  document.querySelectorAll('#mc-grid .mc-option[data-ihap="true"]').forEach(btn => {
+    btn.insertAdjacentHTML('beforeend', '<div style="font-size:9px;color:#f472b6;font-weight:700;">이합</div>');
+  });
   if (isIhap(w) && w.chinese.length >= 2) {
     const sentEl = document.querySelector('.sq-sentence');
     if (sentEl) sentEl.innerHTML = highlightIhap(sentEl.textContent, w.chinese);
@@ -3252,6 +3375,12 @@ function nextVocabQuestion() {
 }
 
 function showVocabResult() {
+  // Mark weak review as done for today
+  if (vsState.sessionId === 99 || vsState.sessionId === 98) {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    localStorage.setItem('mock_today_weak_' + dateStr, 'true');
+    updateTodayProgress();
+  }
   const total = vsState.totalAnswered;
   const score = vsState.score;
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
@@ -3288,6 +3417,425 @@ function showVocabResult() {
 
   // Mark session as done
   if (vsState.sessionId > 0) markSessionDone(vsState.sessionId);
+}
+
+// =================== MOCK TEST ===================
+let mockState = null;
+
+function startMockTest(type) {
+  if (!window.MockGen || hskWords.length === 0) { toast('데이터 로딩 중...'); return; }
+  const count = 10;
+  let questions = [];
+  let title = '';
+  if (type === 'listening') {
+    questions = MockGen.generateListening(hskWords, count);
+    title = '모의고사 - 듣기';
+  } else if (type === 'writing') {
+    questions = MockGen.generateWriting(hskWords, count);
+    title = '모의고사 - 쓰기';
+  } else if (type === 'reading') {
+    questions = MockGen.generateReading(hskWords, count);
+    title = '모의고사 - 독해';
+  }
+  if (questions.length === 0) { toast('문제 생성 실패'); return; }
+  mockState = { type, questions, current: 0, score: 0, results: [], title };
+  document.getElementById('mock-header').textContent = title;
+  showPage('mocktest');
+  renderMockQuestion();
+}
+
+function renderMockQuestion() {
+  if (mockState.current >= mockState.questions.length) { showMockResult(); return; }
+  const q = mockState.questions[mockState.current];
+  const total = mockState.questions.length;
+  document.getElementById('mock-counter').textContent = (mockState.current + 1) + '/' + total;
+  document.getElementById('mock-progress').style.width = (mockState.current / total * 100) + '%';
+  const content = document.getElementById('mock-content');
+  const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  if (q.type === 'ox') renderListeningOX(q, content, esc);
+  else if (q.type === 'dialogue') renderListeningDialogue(q, content, esc);
+  else if (q.type === 'order') renderWritingOrder(q, content, esc);
+  else if (q.type === 'fill') renderReadingFill(q, content, esc);
+  else if (q.type === 'sentence_order') renderReadingSentenceOrder(q, content, esc);
+}
+
+// --- Listening OX ---
+function renderListeningOX(q, content, esc) {
+  content.innerHTML = `
+    <div style="text-align:center; margin-bottom:16px;">
+      <button class="btn" id="mock-play-btn" onclick="playMockTTS()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:12px; font-size:15px; cursor:pointer;">🔊 문장 듣기</button>
+      <div style="font-size:11px; color:var(--text2); margin-top:6px;">1회만 재생됩니다</div>
+    </div>
+    <div id="mock-tts-text" style="display:none;" data-text="${esc(q.ttsText)}"></div>
+    <div style="background:var(--card); border-radius:12px; padding:16px; margin-bottom:16px;">
+      <div style="font-size:11px; color:var(--text2); margin-bottom:6px;">이 문장이 맞는지 판단하세요:</div>
+      <div style="font-size:17px; font-weight:600; line-height:1.6;">${esc(q.statement)}</div>
+    </div>
+    <div style="display:flex; gap:12px; margin-bottom:16px;">
+      <button class="btn btn-block" onclick="answerMock(true)" style="flex:1; padding:16px; font-size:18px; background:#22c55e22; border:2px solid #22c55e44; color:var(--success); border-radius:12px; cursor:pointer; font-weight:700;">⭕ 맞다</button>
+      <button class="btn btn-block" onclick="answerMock(false)" style="flex:1; padding:16px; font-size:18px; background:#ef444422; border:2px solid #ef444444; color:var(--danger); border-radius:12px; cursor:pointer; font-weight:700;">❌ 틀리다</button>
+    </div>
+    <div id="mock-feedback" style="display:none;"></div>`;
+  mockState._answered = false;
+  mockState._played = false;
+}
+
+// --- Listening Dialogue ---
+function renderListeningDialogue(q, content, esc) {
+  content.innerHTML = `
+    <div style="text-align:center; margin-bottom:16px;">
+      <button class="btn" id="mock-play-btn" onclick="playMockTTS()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:12px; font-size:15px; cursor:pointer;">🔊 대화 듣기</button>
+      <div style="font-size:11px; color:var(--text2); margin-top:6px;">1회만 재생됩니다</div>
+    </div>
+    <div id="mock-tts-text" style="display:none;" data-text="${esc(q.ttsText)}"></div>
+    <div style="background:var(--card); border-radius:12px; padding:16px; margin-bottom:16px;">
+      <div style="font-size:15px; font-weight:600; margin-bottom:8px;">${esc(q.question)}</div>
+    </div>
+    <div id="mock-options" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+      ${q.options.map((o, i) => `
+        <button class="btn mock-opt" data-idx="${i}" onclick="answerMock(${i})" style="text-align:left; padding:14px 16px; background:var(--card); border:2px solid #333; border-radius:12px; color:var(--text); font-size:15px; cursor:pointer;">
+          <span style="color:var(--accent); font-weight:700; margin-right:8px;">${'ABCD'[i]}</span>${esc(o)}
+        </button>`).join('')}
+    </div>
+    <div id="mock-feedback" style="display:none;"></div>`;
+  mockState._answered = false;
+  mockState._played = false;
+}
+
+// --- Writing Order ---
+function renderWritingOrder(q, content, esc) {
+  mockState._orderSelected = [];
+  mockState._orderRemaining = [...q.segments];
+  mockState._answered = false;
+  renderOrderUI(q, content, esc);
+}
+
+function renderOrderUI(q, content, esc) {
+  const sel = mockState._orderSelected;
+  const rem = mockState._orderRemaining;
+  content.innerHTML = `
+    <div style="background:var(--card); border-radius:12px; padding:16px; margin-bottom:16px;">
+      <div style="font-size:11px; color:var(--text2); margin-bottom:6px;">다음 단어를 올바른 순서로 배열하세요</div>
+      <div style="font-size:15px; color:var(--warning); margin-bottom:8px;">${esc(q.korean)}</div>
+    </div>
+    <div style="min-height:50px; background:var(--card); border-radius:12px; padding:12px; margin-bottom:12px; display:flex; flex-wrap:wrap; gap:6px; border:2px solid #333;">
+      ${sel.length === 0 ? '<span style="color:#555; font-size:13px;">여기에 순서대로 배치됩니다</span>' : ''}
+      ${sel.map((s, i) => `<span onclick="mockOrderRemove(${i})" style="background:var(--accent); color:#fff; padding:6px 12px; border-radius:8px; font-size:16px; cursor:pointer;">${esc(s)}</span>`).join('')}
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;">
+      ${rem.map((s, i) => `<span onclick="mockOrderSelect(${i})" style="background:var(--card2); color:var(--text); padding:6px 12px; border-radius:8px; font-size:16px; cursor:pointer; border:1px solid #444;">${esc(s)}</span>`).join('')}
+    </div>
+    ${rem.length === 0 && !mockState._answered ? `<button class="btn btn-primary btn-block" onclick="checkMockOrder()">확인</button>` : ''}
+    <div id="mock-feedback" style="display:none;"></div>`;
+}
+
+function mockOrderSelect(i) {
+  if (mockState._answered) return;
+  mockState._orderSelected.push(mockState._orderRemaining[i]);
+  mockState._orderRemaining.splice(i, 1);
+  renderOrderUI(mockState.questions[mockState.current], document.getElementById('mock-content'), s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+}
+
+function mockOrderRemove(i) {
+  if (mockState._answered) return;
+  mockState._orderRemaining.push(mockState._orderSelected[i]);
+  mockState._orderSelected.splice(i, 1);
+  renderOrderUI(mockState.questions[mockState.current], document.getElementById('mock-content'), s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+}
+
+function checkMockOrder() {
+  const q = mockState.questions[mockState.current];
+  const userAnswer = mockState._orderSelected.join('');
+  const correctAnswer = q.answer.join('');
+  const isCorrect = userAnswer === correctAnswer;
+  answerMockCommon(isCorrect, q, userAnswer, correctAnswer);
+}
+
+// --- Reading Fill ---
+function renderReadingFill(q, content, esc) {
+  mockState._fillAnswers = new Array(q.sentences.length).fill(-1);
+  mockState._answered = false;
+  const optHtml = q.options.map((o, i) => `<span style="background:var(--accent); color:#fff; padding:4px 10px; border-radius:6px; font-size:15px; font-weight:600;">${esc(o.chinese)}</span> <span style="font-size:12px; color:var(--warning);">${esc(o.pinyin)}</span>`).join(' &nbsp; ');
+  content.innerHTML = `
+    <div style="background:var(--card); border-radius:12px; padding:14px; margin-bottom:14px;">
+      <div style="font-size:11px; color:var(--text2); margin-bottom:8px;">보기에서 알맞은 단어를 골라 빈칸을 채우세요</div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px;">${optHtml}</div>
+    </div>
+    ${q.sentences.map((s, si) => `
+      <div style="background:var(--card); border-radius:10px; padding:12px; margin-bottom:8px;">
+        <div style="font-size:15px; line-height:1.6; margin-bottom:6px;">${esc(s.blank)}</div>
+        <div style="font-size:12px; color:var(--text2); margin-bottom:8px;">${esc(s.korean)}</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          ${q.options.map((o, oi) => `<button class="btn mock-fill-opt" data-si="${si}" data-oi="${oi}" onclick="selectFillOption(${si},${oi})" style="padding:6px 12px; border-radius:8px; font-size:14px; background:var(--card2); border:2px solid #444; color:var(--text); cursor:pointer;">${esc(o.chinese)}</button>`).join('')}
+        </div>
+      </div>`).join('')}
+    <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="checkMockFill()">확인</button>
+    <div id="mock-feedback" style="display:none;"></div>`;
+}
+
+function selectFillOption(si, oi) {
+  if (mockState._answered) return;
+  mockState._fillAnswers[si] = oi;
+  document.querySelectorAll(`.mock-fill-opt[data-si="${si}"]`).forEach(btn => {
+    btn.style.borderColor = parseInt(btn.dataset.oi) === oi ? 'var(--accent)' : '#444';
+    btn.style.background = parseInt(btn.dataset.oi) === oi ? 'var(--accent)22' : 'var(--card2)';
+  });
+}
+
+function checkMockFill() {
+  const q = mockState.questions[mockState.current];
+  let correct = 0;
+  q.sentences.forEach((s, i) => { if (mockState._fillAnswers[i] === s.answer) correct++; });
+  const isCorrect = correct === q.sentences.length;
+  const userStr = mockState._fillAnswers.map(i => i >= 0 ? q.options[i]?.chinese : '?').join(', ');
+  const correctStr = q.sentences.map(s => q.options[s.answer]?.chinese).join(', ');
+  answerMockCommon(isCorrect, q, userStr, correctStr, correct + '/' + q.sentences.length + ' 맞음');
+}
+
+// --- Reading Sentence Order ---
+function renderReadingSentenceOrder(q, content, esc) {
+  mockState._sentenceOrder = [];
+  mockState._answered = false;
+  content.innerHTML = `
+    <div style="background:var(--card); border-radius:12px; padding:14px; margin-bottom:14px;">
+      <div style="font-size:11px; color:var(--text2); margin-bottom:8px;">다음 문장을 논리적 순서로 배열하세요</div>
+    </div>
+    <div id="mock-sent-selected" style="min-height:40px; background:var(--card); border-radius:12px; padding:12px; margin-bottom:12px; border:2px solid #333;">
+      <span style="color:#555; font-size:13px;">순서대로 클릭하세요</span>
+    </div>
+    <div id="mock-sent-options">
+      ${q.sentences.map(s => `
+        <div class="mock-sent-opt" data-label="${s.label}" onclick="selectSentOrder('${s.label}')" style="background:var(--card); border-radius:10px; padding:12px; margin-bottom:8px; cursor:pointer; border:2px solid #444;">
+          <span style="color:var(--accent); font-weight:700; margin-right:8px;">${s.label}</span>
+          <span style="font-size:15px;">${esc(s.text)}</span>
+        </div>`).join('')}
+    </div>
+    <div id="mock-sent-check" style="display:none;">
+      <button class="btn btn-primary btn-block" onclick="checkSentOrder()">확인</button>
+    </div>
+    <div id="mock-feedback" style="display:none;"></div>`;
+}
+
+function selectSentOrder(label) {
+  if (mockState._answered) return;
+  if (mockState._sentenceOrder.includes(label)) return;
+  mockState._sentenceOrder.push(label);
+  const el = document.querySelector(`.mock-sent-opt[data-label="${label}"]`);
+  if (el) { el.style.opacity = '0.4'; el.style.pointerEvents = 'none'; }
+  const selDiv = document.getElementById('mock-sent-selected');
+  selDiv.innerHTML = mockState._sentenceOrder.map(l => `<span style="background:var(--accent); color:#fff; padding:4px 10px; border-radius:6px; font-size:15px; font-weight:700; margin-right:6px;">${l}</span>`).join('');
+  if (mockState._sentenceOrder.length >= mockState.questions[mockState.current].sentences.length) {
+    document.getElementById('mock-sent-check').style.display = 'block';
+  }
+}
+
+function checkSentOrder() {
+  const q = mockState.questions[mockState.current];
+  const userAnswer = mockState._sentenceOrder.join('');
+  const isCorrect = userAnswer === q.answer;
+  answerMockCommon(isCorrect, q, userAnswer, q.answer);
+}
+
+// --- TTS ---
+function playMockTTS() {
+  const el = document.getElementById('mock-tts-text');
+  if (!el || mockState._played) return;
+  mockState._played = true;
+  const text = el.dataset.text;
+  const btn = document.getElementById('mock-play-btn');
+  if (btn) { btn.style.opacity = '0.5'; btn.textContent = '🔊 재생 중...'; btn.style.pointerEvents = 'none'; }
+  if ('speechSynthesis' in window) {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'zh-CN';
+    utter.rate = 0.9;
+    const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('zh'));
+    if (voices.length > 0) utter.voice = voices[0];
+    utter.onend = () => { if (btn) btn.textContent = '🔊 재생 완료'; };
+    speechSynthesis.speak(utter);
+  } else {
+    toast('TTS를 지원하지 않는 브라우저입니다');
+  }
+}
+
+// --- Common answer handler ---
+function answerMock(userAnswer) {
+  if (mockState._answered) return;
+  const q = mockState.questions[mockState.current];
+  if (q.type === 'ox') {
+    const isCorrect = userAnswer === q.answer;
+    answerMockCommon(isCorrect, q, userAnswer ? '맞다' : '틀리다', q.answer ? '맞다' : '틀리다');
+  } else if (q.type === 'dialogue') {
+    const isCorrect = userAnswer === q.answer;
+    answerMockCommon(isCorrect, q, q.options[userAnswer], q.options[q.answer]);
+  }
+}
+
+function answerMockCommon(isCorrect, q, userAnswer, correctAnswer, extra) {
+  mockState._answered = true;
+  if (isCorrect) mockState.score++;
+  mockState.results.push({ question: q, correct: isCorrect, userAnswer, correctAnswer });
+
+  // Record to wrong items if incorrect
+  if (!isCorrect && q.word) {
+    addWrongItem('vocab', { chinese: q.word.chinese, pinyin: q.word.pinyin, meaning: q.word.meaning, sentence: q.word.sentence?.zh || '', sentenceKo: q.word.sentence?.ko || '' });
+  }
+  recordReview();
+
+  const fb = document.getElementById('mock-feedback');
+  fb.style.display = 'block';
+
+  // Build explanation with word details
+  let wordDetail = '';
+  if (q.word) {
+    const w = q.word;
+    wordDetail = `<div style="padding:8px 10px; background:var(--bg); border-radius:8px; margin-top:8px;">
+      <span style="font-size:16px; font-weight:700;">${w.chinese}</span>
+      <span style="font-size:13px; color:var(--warning); margin-left:4px;">${w.pinyin}</span>
+      <div style="font-size:13px; color:var(--text); margin-top:2px;">${w.meaning}</div>
+      ${w.sentence ? `<div style="font-size:13px; color:var(--text2); margin-top:4px;">${w.sentence.zh}<br>${w.sentence.ko}</div>` : ''}
+    </div>`;
+  }
+
+  fb.innerHTML = `
+    <div style="background:var(--card); border-radius:12px; padding:14px; margin-top:12px;">
+      <div style="font-size:16px; font-weight:600; margin-bottom:8px; color:${isCorrect ? 'var(--success)' : 'var(--danger)'};">
+        ${isCorrect ? '정답!' : '오답'}${extra ? ' (' + extra + ')' : ''}
+      </div>
+      ${!isCorrect ? `<div style="font-size:13px; margin-bottom:4px;"><span style="color:var(--danger);">내 답: ${userAnswer}</span> → <span style="color:var(--success);">정답: ${correctAnswer}</span></div>` : ''}
+      ${q.explanation ? `<div style="font-size:13px; color:var(--text2); margin-top:6px;">${q.explanation}</div>` : ''}
+      ${q.type === 'order' ? `<div style="font-size:16px; color:var(--success); margin-top:8px;">${q.answer.join('')}</div><div style="font-size:13px; color:var(--warning); font-style:italic;">${toPinyin(q.answer.join(''))}</div><div style="font-size:13px; color:var(--text2);">${q.korean}</div>` : ''}
+      ${wordDetail}
+      <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="nextMockQuestion()">다음</button>
+    </div>`;
+
+  // Highlight buttons for listening
+  if (q.type === 'ox') {
+    document.querySelectorAll('#mock-content .btn-block').forEach(btn => { if (!btn.textContent.includes('다음')) btn.style.pointerEvents = 'none'; });
+  }
+  if (q.type === 'dialogue') {
+    document.querySelectorAll('.mock-opt').forEach(btn => {
+      const idx = parseInt(btn.dataset.idx);
+      if (idx === q.answer) btn.style.borderColor = 'var(--success)';
+      else btn.style.opacity = '0.4';
+      btn.style.pointerEvents = 'none';
+    });
+  }
+}
+
+function nextMockQuestion() {
+  mockState.current++;
+  renderMockQuestion();
+}
+
+function showMockResult() {
+  const { type, score, results, title } = mockState;
+  const total = results.length;
+  const pct = Math.round((score / total) * 100);
+  const dateStr = new Date().toISOString().slice(0, 10);
+
+  // Save completion
+  localStorage.setItem('mock_today_' + type + '_' + dateStr, 'true');
+
+  // Save stats
+  const statsKey = 'mock_stats_' + type;
+  const stats = JSON.parse(localStorage.getItem(statsKey) || '{"total":0,"correct":0}');
+  stats.total += total;
+  stats.correct += score;
+  localStorage.setItem(statsKey, JSON.stringify(stats));
+
+  const content = document.getElementById('mock-content');
+  content.innerHTML = `
+    <div style="text-align:center; padding:20px 0;">
+      <div style="font-size:48px; margin-bottom:12px;">${pct >= 80 ? '🎉' : pct >= 60 ? '💪' : '📚'}</div>
+      <div style="font-size:24px; font-weight:700; margin-bottom:4px;">${score}/${total}</div>
+      <div style="font-size:15px; color:var(--text2); margin-bottom:16px;">${title} 완료</div>
+      <div style="font-size:48px; font-weight:700; color:${pct >= 80 ? 'var(--success)' : pct >= 60 ? 'var(--warning)' : 'var(--danger)'};">${pct}%</div>
+    </div>
+    ${results.filter(r => !r.correct).length > 0 ? `
+      <div style="background:var(--card); border-radius:12px; padding:14px; margin-bottom:16px;">
+        <div style="font-size:14px; font-weight:600; color:var(--danger); margin-bottom:10px;">틀린 문제 (${results.filter(r => !r.correct).length}개)</div>
+        ${results.filter(r => !r.correct).map(r => `
+          <div style="padding:8px 0; border-bottom:1px solid #333; font-size:13px;">
+            <span style="color:var(--danger);">${r.userAnswer}</span> → <span style="color:var(--success);">${r.correctAnswer}</span>
+            ${r.question.explanation ? `<div style="color:var(--text2); margin-top:2px;">${r.question.explanation}</div>` : ''}
+          </div>`).join('')}
+      </div>` : ''}
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary" onclick="startMockTest('${type}')" style="flex:1;">한 세트 더!</button>
+      <button class="btn btn-outline" onclick="showPage('home')" style="flex:1;">홈으로</button>
+    </div>`;
+
+  updateTodayProgress();
+  updateMockStats();
+}
+
+function updateMockStats() {
+  ['listening', 'reading', 'writing'].forEach(type => {
+    const stats = JSON.parse(localStorage.getItem('mock_stats_' + type) || '{"total":0,"correct":0}');
+    const pct = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+    const bar = document.getElementById('mock-stat-' + type);
+    if (bar) {
+      bar.querySelector('.stat-bar-fill').style.width = pct + '%';
+      bar.querySelector('.stat-bar-val').textContent = pct + '%';
+    }
+  });
+}
+
+function showMoreStudy() {
+  // Toggle visibility of additional study options
+  const panel = document.getElementById('more-study-panel');
+  if (panel) {
+    panel.classList.toggle('show');
+  }
+}
+
+function updateTodayProgress() {
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const cards = [
+    { id: 'today-weak-card', key: 'mock_today_weak_' + dateStr },
+    { id: 'today-listening-card', key: 'mock_today_listening_' + dateStr },
+    { id: 'today-writing-card', key: 'mock_today_writing_' + dateStr },
+    { id: 'today-reading-card', key: 'mock_today_reading_' + dateStr },
+    { id: 'today-wrong-card', key: 'mock_today_wrong_' + dateStr }
+  ];
+  // Also count the 6th task (could be vocab session)
+  const totalTasks = 6;
+  let doneCount = 0;
+
+  cards.forEach(c => {
+    const el = document.getElementById(c.id);
+    if (!el) return;
+    const isDone = localStorage.getItem(c.key) === 'true';
+    el.dataset.done = isDone ? 'true' : 'false';
+    if (isDone) {
+      el.classList.add('done');
+      const check = el.querySelector('.card-done-check');
+      if (check) check.textContent = '\u2713';
+      doneCount++;
+    } else {
+      el.classList.remove('done');
+      const check = el.querySelector('.card-done-check');
+      if (check) check.textContent = '-';
+    }
+  });
+
+  // Check weak review again button
+  const weakDone = localStorage.getItem('mock_today_weak_' + dateStr) === 'true';
+  const againBtn = document.getElementById('weak-review-again-btn');
+  if (againBtn) againBtn.style.display = weakDone ? 'inline-block' : 'none';
+
+  // Count vocab session completion as 6th task
+  if (typeof isSessionDone === 'function') {
+    const vocabDone = [1,2,3,4,5].some(id => isSessionDone(id));
+    if (vocabDone) doneCount++;
+  }
+
+  // Update progress label and bar
+  const label = document.getElementById('today-progress-label');
+  if (label) label.textContent = '오늘의 학습 ' + doneCount + '/' + totalTasks + ' 완료';
+  const fill = document.getElementById('today-progress-fill');
+  if (fill) fill.style.width = Math.round((doneCount / totalTasks) * 100) + '%';
 }
 
 // =================== INIT ===================
