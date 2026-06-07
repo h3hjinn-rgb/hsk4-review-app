@@ -629,6 +629,14 @@ body {
     <div id="mock-content"></div>
   </div>
 
+  <!-- POS Study Page (품사별 집중학습) -->
+  <div id="page-pos-study" class="page">
+    <button class="back-btn" onclick="showPage('home')">&lt; 뒤로</button>
+    <div class="page-header">품사별 집중학습</div>
+    <div style="font-size:13px; color:var(--text2); margin-bottom:14px;">3~4급 단어를 품사별로 나눠서 학습합니다</div>
+    <div id="pos-category-list"></div>
+  </div>
+
   <!-- Test Page -->
   <div id="page-test" class="page">
     <button class="back-btn" onclick="showPage('home')">&lt; 뒤로</button>
@@ -1132,7 +1140,7 @@ function showPage(pageId) {
   if (!el) { document.getElementById('page-home').classList.add('active'); pageId = 'home'; }
   else el.classList.add('active');
   // Map sub-pages to parent nav items
-  const navMap = { vocabsession: 'vocab', quiz: 'test', flashcard: 'notes', wordquiz: 'notes', daily: 'home', typing: 'home', wrong: 'home', mocktest: 'home' };
+  const navMap = { vocabsession: 'home', quiz: 'test', flashcard: 'notes', wordquiz: 'notes', daily: 'home', typing: 'home', wrong: 'home', mocktest: 'home', 'pos-study': 'home' };
   const navPage = navMap[pageId] || pageId;
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.page === navPage);
@@ -1140,6 +1148,7 @@ function showPage(pageId) {
   if (pageId === 'home') { updateHomeStats(); updateWrongCount(); }
   if (pageId === 'wrong') renderWrongList();
   if (pageId === 'vocab') updateVocabPage();
+  if (pageId === 'pos-study') renderPosStudyPage();
 }
 
 function toast(msg) {
@@ -3220,7 +3229,7 @@ function normalizePinyinBase(py) {
 function confirmQuitVocab() {
   if (confirm('학습을 종료할까요?')) {
     // 홈에서 시작한 스마트 복습(98,99)이면 홈으로, 아니면 vocab으로
-    if (vsState && (vsState.sessionId === 98 || vsState.sessionId === 99)) {
+    if (vsState && (vsState.sessionId === 97 || vsState.sessionId === 98 || vsState.sessionId === 99)) {
       showPage('home');
     } else {
       showPage('vocab');
@@ -3413,6 +3422,70 @@ function showVocabResult() {
 
   // Mark session as done
   if (vsState.sessionId > 0) markSessionDone(vsState.sessionId);
+}
+
+// =================== POS STUDY (품사별 집중학습) ===================
+const POS_CATEGORIES = [
+  { id: 'adverb', label: '부사', pos: ['부사'], icon: '副', desc: '即使/尽管/无论 등 빈칸채우기 핵심', color: '#e94560' },
+  { id: 'conjunction', label: '접속사', pos: ['접속사'], icon: '连', desc: '不但/虽然/如果 등 문장 연결', color: '#f59e0b' },
+  { id: 'preposition', label: '전치사', pos: ['전치사'], icon: '介', desc: '把/被/关于/根据 등 문장 구조', color: '#10b981' },
+  { id: 'ihap', label: '이합동사', pos: ['이합동사'], icon: '离', desc: '帮忙/见面/结婚 등 분리 패턴', color: '#8b5cf6' },
+  { id: 'verb', label: '동사', pos: ['동사'], icon: '动', desc: '핵심 동사 201개', color: '#3b82f6' },
+  { id: 'adjective', label: '형용사', pos: ['형용사'], icon: '形', desc: '평가/묘사 표현 116개', color: '#ec4899' },
+  { id: 'noun', label: '명사', pos: ['명사'], icon: '名', desc: '고빈출 명사 379개', color: '#6366f1' },
+  { id: 'quantifier', label: '양사', pos: ['양사'], icon: '量', desc: '단위 표현 23개', color: '#14b8a6' },
+];
+
+function renderPosStudyPage() {
+  const container = document.getElementById('pos-category-list');
+  if (!container || hskWords.length === 0) return;
+  const l34 = hskWords.filter(w => w.level >= 3);
+
+  container.innerHTML = POS_CATEGORIES.map(cat => {
+    const words = l34.filter(w => cat.pos.includes(w.pos));
+    const learned = words.filter(w => { const s = getVocabSRS(w.id); return s.correct > 0 || s.wrong > 0; }).length;
+    return `
+      <div class="card" onclick="startPosQuiz('${cat.id}')" style="margin-bottom:10px; cursor:pointer; border-left:4px solid ${cat.color};">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:36px; height:36px; border-radius:8px; background:${cat.color}22; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; color:${cat.color};">${cat.icon}</div>
+            <div>
+              <div style="font-size:15px; font-weight:600;">${cat.label}</div>
+              <div style="font-size:12px; color:var(--text2);">${cat.desc}</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:16px; font-weight:700;">${words.length}</div>
+            <div style="font-size:11px; color:var(--text2);">${learned}개 학습</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function startPosQuiz(catId) {
+  const cat = POS_CATEGORIES.find(c => c.id === catId);
+  if (!cat) return;
+  const l34 = hskWords.filter(w => w.level >= 3 && cat.pos.includes(w.pos) && w.sentence);
+  if (l34.length === 0) { toast('해당 품사 단어가 없습니다'); return; }
+
+  // 취약 단어 우선 + 랜덤 50개
+  const scored = l34.map(w => {
+    const s = getVocabSRS(w.id);
+    const total = s.correct + s.wrong;
+    const errorRate = total > 0 ? s.wrong / total : 0.5;
+    return { word: w, score: errorRate * 10 + (total === 0 ? 5 : 0) + (s.avgTime >= 5000 ? 2 : 0) };
+  }).sort((a, b) => b.score - a.score);
+
+  const queue = scored.slice(0, 50).map(s => s.word);
+  queue.sort(() => Math.random() - 0.5);
+
+  vsState = {
+    queue, current: 0, score: 0, totalAnswered: 0,
+    wrongQueue: [], startTime: 0, answered: false, results: [], sessionId: 97
+  };
+  showPage('vocabsession');
+  renderVocabQuestion();
 }
 
 // =================== MOCK TEST ===================
