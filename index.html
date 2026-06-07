@@ -109,15 +109,17 @@ body {
 }
 .quiz-sentence .blank {
   display: inline-block;
-  min-width: 60px;
-  border-bottom: 3px solid var(--accent);
-  margin: 0 4px;
-  padding: 2px 8px;
+  min-width: 80px;
+  border-bottom: 3px dashed var(--accent);
+  margin: 0 6px;
+  padding: 4px 12px;
   text-align: center;
   color: var(--accent);
-  font-weight: 600;
-  background: rgba(233,69,96,0.08);
-  border-radius: 4px 4px 0 0;
+  font-weight: 700;
+  font-size: 14px;
+  background: rgba(233,69,96,0.15);
+  border-radius: 6px 6px 0 0;
+  letter-spacing: 2px;
 }
 .quiz-sentence .blank.correct { border-color: var(--success); color: var(--success); }
 .quiz-sentence .blank.wrong { border-color: var(--danger); color: var(--danger); }
@@ -345,14 +347,14 @@ body {
 .mc-option {
   padding: 16px 12px; background: var(--card);
   border: 2px solid #333; border-radius: 14px;
-  font-size: 20px; font-weight: 600; color: var(--text);
+  font-size: 26px; font-weight: 600; color: var(--text);
   text-align: center; cursor: pointer; transition: all .15s;
 }
 .mc-option:active { transform: scale(0.96); }
 .mc-option.correct { border-color: var(--success); background: #22c55e22; }
 .mc-option.wrong { border-color: var(--danger); background: #ef444422; }
 .mc-option.dim { opacity: 0.3; pointer-events: none; }
-.mc-option .mc-pinyin { font-size: 11px; color: var(--warning); font-weight: 400; margin-top: 4px; }
+.mc-option .mc-pinyin { font-size: 11px; color: var(--warning); font-weight: 400; margin-top: 4px; display: none; }
 .mc-option .mc-meaning { font-size: 12px; color: var(--text2); font-weight: 400; margin-top: 4px; display: none; }
 .mc-option.reveal .mc-meaning { display: block; }
 .mc-option.reveal .mc-pinyin { display: block; }
@@ -467,6 +469,19 @@ body {
     <div class="card" onclick="showPage('notes')">
       <div class="card-title">비밀노트</div>
       <div class="card-sub">22개 카테고리 - 핵심 단어 220개</div>
+    </div>
+    <div class="card" style="background: linear-gradient(135deg, #4a1942, #e94560); padding: 12px 16px;">
+      <div class="card-title" style="font-size: 16px; margin-bottom: 10px;">스마트 복습</div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn" onclick="startUnfamiliarReview()" style="flex:1; background:rgba(255,255,255,0.15); color:#fff; border:none; padding:10px 8px; border-radius:8px; font-size:13px; cursor:pointer;">
+          <div style="font-size:16px; margin-bottom:2px;">4급 낯선 단어</div>
+          <div style="font-size:11px; color:#ddd;" id="home-unfamiliar-count">적게 본 단어 위주</div>
+        </button>
+        <button class="btn" onclick="startWeakReview()" style="flex:1; background:rgba(255,255,255,0.15); color:#fff; border:none; padding:10px 8px; border-radius:8px; font-size:13px; cursor:pointer;">
+          <div style="font-size:16px; margin-bottom:2px;">취약 단어</div>
+          <div style="font-size:11px; color:#ddd;" id="home-weak-count">오답률 높은 단어</div>
+        </button>
+      </div>
     </div>
     <div class="card" onclick="showPage('wrong')" style="border:1px solid var(--danger)33;">
       <div class="card-title" style="color:var(--danger);">틀린 문제 모아보기</div>
@@ -686,7 +701,7 @@ body {
       <div id="vocab-progress-fill" style="height:100%; background: linear-gradient(90deg, var(--success), var(--warning)); width:0%; transition: width .5s;"></div>
     </div>
     <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text2); margin-bottom:16px;">
-      <span id="vocab-progress-text">0 / 1200</span>
+      <span id="vocab-progress-text">0 / 1201</span>
       <span id="vocab-avg-speed">평균 응답: -</span>
     </div>
   </div>
@@ -938,6 +953,28 @@ function updateHomeStats() {
 
   updateDday();
   updateHomeTodoSummary();
+
+  // Update smart review counts
+  const weakEl = document.getElementById('home-weak-count');
+  const unfamiliarEl = document.getElementById('home-unfamiliar-count');
+  if (weakEl) {
+    const weakCount = hskWords.filter(w => {
+      if (!w.sentence || w.level <= 2) return false;
+      const s = getVocabSRS(w.id);
+      const total = s.correct + s.wrong;
+      if (total === 0) return false;
+      return s.wrong / total > 0.3 || s.avgTime >= 8000 || s.level <= 2;
+    }).length;
+    weakEl.textContent = weakCount > 0 ? weakCount + '개 취약' : '오답률 높은 단어';
+  }
+  if (unfamiliarEl) {
+    const unfamiliarCount = hskWords.filter(w => {
+      if (!w.sentence || w.level !== 4) return false;
+      const s = getVocabSRS(w.id);
+      return (s.correct + s.wrong) <= 2;
+    }).length;
+    unfamiliarEl.textContent = unfamiliarCount > 0 ? unfamiliarCount + '개 남음' : '적게 본 단어 위주';
+  }
 }
 
 function updateHomeTodoSummary() {
@@ -1156,8 +1193,15 @@ function renderQuizQuestion() {
     <div class="quiz-korean">${q.korean}</div>
     ${showPinyin ? `<div class="quiz-pinyin">${q.pinyins.join('  |  ')}</div>` : ''}
     <div class="quiz-sentence">${(() => {
+      const blankSpan = (n) => `<span class="blank"><span style="font-size:10px;background:var(--accent);color:white;padding:0 5px;border-radius:3px;margin-right:2px;vertical-align:middle;">${n}</span>＿＿＿</span>`;
+      const tabCount = (q.chineseTemplate.match(/\t+/g) || []).length;
+      const extraBlanks = q.pinyins.length - tabCount;
       let bi = 0;
-      return q.chineseTemplate.replace(/\t+/g, () => ` <span class="blank">${++bi}</span> `);
+      let prefix = '';
+      if (extraBlanks > 0) {
+        for (let e = 0; e < extraBlanks; e++) prefix += ' ' + blankSpan(++bi) + ' ';
+      }
+      return prefix + q.chineseTemplate.replace(/\t+/g, () => ' ' + blankSpan(++bi) + ' ');
     })()}</div>
     <div style="font-size:13px; color:var(--warning); margin-bottom:12px; font-style:italic; text-align:center;">${toPinyin(q.chineseTemplate.replace(/\t+/g, ''))}</div>
     <div style="margin-bottom:12px;">
@@ -1210,7 +1254,7 @@ function showQuizAnswer() {
   feedback.style.display = 'block';
   feedback.style.background = 'var(--card2)';
   const answersHtml = q.pinyins.map((p, i) => {
-    const ch = lookupChineseByPinyin(p);
+    const ch = lookupChineseByPinyin(p, q.chineseTemplate);
     return `<span style="font-size:18px; font-weight:600; color:var(--success);">${ch || '?'}</span> <span style="font-size:12px; color:var(--warning);">${p}</span>`;
   }).join(' &nbsp;|&nbsp; ');
   feedback.innerHTML = `<div style="font-size:13px; color:var(--text2); margin-bottom:4px;">정답:</div>
@@ -1225,10 +1269,38 @@ function normalizePinyinForCompare(str) {
     .replace(/[^a-z]/gi, '').toLowerCase();
 }
 
-function lookupChineseByPinyin(pinyin) {
+function countPinyinSyllables(py) {
+  // Count syllables in pinyin string (e.g., "shēngrì" = 2, "yuè" = 1)
+  const clean = py.replace(/[''·\s-]/g, '');
+  const vowelGroups = clean.match(/[aāáǎàeēéěèiīíǐìoōóǒòuūúǔùüǖǘǚǜ]+/gi);
+  return vowelGroups ? vowelGroups.length : 1;
+}
+
+function lookupChineseByPinyin(pinyin, template) {
   const norm = normalizePinyinForCompare(pinyin);
-  const w = hskWords.find(w => normalizePinyinForCompare(w.pinyin) === norm);
-  return w ? w.chinese : '';
+  const candidates = hskWords.filter(w => normalizePinyinForCompare(w.pinyin) === norm);
+  if (candidates.length === 0) return '';
+  if (candidates.length === 1) return candidates[0].chinese;
+
+  const expectedSyllables = countPinyinSyllables(pinyin);
+
+  // Try exact pinyin match with tones + character count matching syllable count
+  const pinyinLower = pinyin.toLowerCase().replace(/['']/g, '');
+  const exactToneAndLen = candidates.find(w =>
+    w.pinyin.toLowerCase().replace(/['']/g, '') === pinyinLower &&
+    w.chinese.length === expectedSyllables
+  );
+  if (exactToneAndLen) return exactToneAndLen.chinese;
+
+  // Try character count matching syllable count
+  const lenMatch = candidates.find(w => w.chinese.length === expectedSyllables);
+  if (lenMatch) return lenMatch.chinese;
+
+  // Try exact pinyin with tones
+  const exactTone = candidates.find(w => w.pinyin.toLowerCase().replace(/['']/g, '') === pinyinLower);
+  if (exactTone) return exactTone.chinese;
+
+  return candidates[0].chinese;
 }
 
 function checkQuizAnswer() {
@@ -1242,7 +1314,7 @@ function checkQuizAnswer() {
     const normalExpected = normalizePinyinForCompare(expectedPinyin);
     const normalUser = normalizePinyinForCompare(userPinyin || userInput);
     const isCorrect = normalUser.length > 0 && normalUser === normalExpected;
-    const correctChinese = lookupChineseByPinyin(expectedPinyin);
+    const correctChinese = lookupChineseByPinyin(expectedPinyin, q.chineseTemplate);
     return { userInput, userPinyin, expectedPinyin, correctChinese, isCorrect };
   });
 
@@ -2507,9 +2579,9 @@ const PLAN = [
   { day:9,  from:826, to:900,  label:'4급 ④' },
   { day:10, from:901, to:1000, label:'4급 ⑤' },
   { day:11, from:1001,to:1100, label:'4급 ⑥' },
-  { day:12, from:1101,to:1200, label:'4급 ⑦' },
+  { day:12, from:1101,to:1201, label:'4급 ⑦' },
   { day:13, from:1,   to:600,  label:'1~3급 총복습' },
-  { day:14, from:601, to:1200, label:'4급 총복습' },
+  { day:14, from:601, to:1201, label:'4급 총복습' },
 ];
 
 // 5 sessions per day
@@ -2610,6 +2682,7 @@ function getDueVocabWords(wordPool) {
   const pool = wordPool || hskWords;
   return pool.filter(w => {
     if (!w.sentence) return false;
+    if (w.level <= 2) return false; // 1~2급 복습 제외
     const s = getVocabSRS(w.id);
     if (s.level === 0 && (s.correct > 0 || s.wrong > 0)) return true;
     return s.level > 0 && s.nextReview <= Date.now();
@@ -2722,8 +2795,8 @@ function updateVocabPage() {
   document.getElementById('v-due').textContent = due;
 
   const learnedCount = mastered + learning;
-  document.getElementById('vocab-progress-fill').style.width = `${(learnedCount / 1200) * 100}%`;
-  document.getElementById('vocab-progress-text').textContent = `${learnedCount} / 1200`;
+  document.getElementById('vocab-progress-fill').style.width = `${(learnedCount / hskWords.length) * 100}%`;
+  document.getElementById('vocab-progress-text').textContent = `${learnedCount} / ${hskWords.length}`;
 
   let totalTime = 0, timeCount = 0;
   for (const w of hskWords) {
@@ -2772,32 +2845,43 @@ function startPlanSession(sessionId, type) {
       queue.push(...learned.slice(0, size));
     }
   } else if (type === 'today_review') {
-    // Re-quiz words learned today (random selection)
-    const learned = getTodayLearnedWords().sort(() => Math.random() - 0.5);
-    queue.push(...learned.slice(0, size));
+    // Re-quiz words learned today, 5초 이내 빠른 정답은 우선순위 뒤로
+    const learned = getTodayLearnedWords().filter(w => w.level >= 3);
+    const slow = learned.filter(w => getVocabSRS(w.id).avgTime >= 5000).sort(() => Math.random() - 0.5);
+    const fast = learned.filter(w => getVocabSRS(w.id).avgTime < 5000).sort(() => Math.random() - 0.5);
+    queue.push(...slow.slice(0, size));
+    if (queue.length < size) queue.push(...fast.slice(0, size - queue.length));
   } else if (type === 'today_weak') {
-    // Weak words: wrong or slow from today
-    const weak = getTodayWeakWords().sort(() => Math.random() - 0.5);
+    // Weak words: wrong or slow from today, 1~2급 제외
+    const weak = getTodayWeakWords().filter(w => w.level >= 3).sort(() => Math.random() - 0.5);
     queue.push(...weak.slice(0, size));
     // If not enough weak, add random from today
     if (queue.length < 10) {
-      const learned = getTodayLearnedWords().filter(w => !queue.find(q => q.id === w.id)).sort(() => Math.random() - 0.5);
+      const learned = getTodayLearnedWords().filter(w => w.level >= 3 && !queue.find(q => q.id === w.id)).sort(() => Math.random() - 0.5);
       queue.push(...learned.slice(0, size - queue.length));
     }
   } else if (type === 'all_review') {
-    // All previously learned words (today + past days)
+    // All previously learned words (today + past days), 1~2급 제외
     const allLearned = hskWords.filter(w => {
       if (!w.sentence) return false;
+      if (w.level <= 2) return false; // 1~2급 복습 제외
       const s = getVocabSRS(w.id);
       return s.correct > 0 || s.wrong > 0;
     });
-    // Prioritize: weak/due words first, then random from the rest
+    // Prioritize: weak/due words first, 5초 이내 빠른 정답은 뒤로
     const weak = allLearned.filter(w => {
       const s = getVocabSRS(w.id);
-      return s.level < 3 || s.wrong > 0 || (s.nextReview <= Date.now());
+      return (s.level < 3 || s.wrong > 0 || (s.nextReview <= Date.now())) && s.avgTime >= 5000;
     }).sort(() => Math.random() - 0.5);
-    const rest = allLearned.filter(w => !weak.find(q => q.id === w.id)).sort(() => Math.random() - 0.5);
+    const medium = allLearned.filter(w => {
+      const s = getVocabSRS(w.id);
+      return (s.level < 3 || s.wrong > 0 || (s.nextReview <= Date.now())) && s.avgTime < 5000;
+    }).sort(() => Math.random() - 0.5);
+    const rest = allLearned.filter(w => !weak.find(q => q.id === w.id) && !medium.find(q => q.id === w.id)).sort(() => Math.random() - 0.5);
     queue.push(...weak.slice(0, size));
+    if (queue.length < size) {
+      queue.push(...medium.slice(0, size - queue.length));
+    }
     if (queue.length < size) {
       queue.push(...rest.slice(0, size - queue.length));
     }
@@ -2835,6 +2919,125 @@ function startPlanSession(sessionId, type) {
 // Legacy compat
 function startVocabSession() { startPlanSession(0, 'mixed'); }
 
+// 4급 낯선 단어 복습 (적게 본 단어 + 오답/느린 단어 우선)
+function startUnfamiliarReview() {
+  const l4 = hskWords.filter(w => w.sentence && w.level === 4);
+  const scored = l4.map(w => {
+    const s = getVocabSRS(w.id);
+    const total = s.correct + s.wrong;
+    const errorRate = total > 0 ? s.wrong / total : 0;
+    const timeScore = Math.min(s.avgTime / 1000, 30);
+    // Lower total attempts = higher priority (unfamiliar)
+    // Higher error rate & slower = also higher priority
+    const unfamiliarScore = Math.max(0, 10 - total * 2); // 적게 본 단어
+    const weakScore = errorRate * 8 + (timeScore > 5 ? timeScore * 0.5 : 0);
+    const srsBonus = s.level <= 2 ? 3 : 0;
+    return { word: w, score: unfamiliarScore + weakScore + srsBonus, total };
+  }).sort((a, b) => b.score - a.score);
+
+  const queue = scored.slice(0, 50).map(s => s.word);
+  if (queue.length === 0) {
+    toast('4급 학습 기록이 없습니다');
+    return;
+  }
+  queue.sort(() => Math.random() - 0.5);
+
+  vsState = {
+    queue,
+    current: 0,
+    score: 0,
+    totalAnswered: 0,
+    wrongQueue: [],
+    startTime: 0,
+    answered: false,
+    results: [],
+    sessionId: 98
+  };
+  showPage('vocabsession');
+  renderVocabQuestion();
+}
+
+// 취약 단어 집중 복습 (오답률 높고 응답 느린 단어)
+function startWeakReview() {
+  const candidates = hskWords.filter(w => {
+    if (!w.sentence || w.level <= 2) return false;
+    const s = getVocabSRS(w.id);
+    return (s.correct > 0 || s.wrong > 0);
+  });
+  // Score: higher = weaker. Prioritize high error rate + slow avg time
+  const scored = candidates.map(w => {
+    const s = getVocabSRS(w.id);
+    const total = s.correct + s.wrong;
+    const errorRate = total > 0 ? s.wrong / total : 0;
+    const timeScore = Math.min(s.avgTime / 1000, 30); // cap at 30s
+    const levelPenalty = s.level <= 2 ? 3 : 0; // low SRS level = weak
+    return { word: w, score: errorRate * 10 + timeScore * 0.5 + levelPenalty };
+  }).sort((a, b) => b.score - a.score);
+
+  const queue = scored.slice(0, 50).map(s => s.word);
+  if (queue.length === 0) {
+    toast('아직 학습 기록이 없습니다');
+    return;
+  }
+  queue.sort(() => Math.random() - 0.5);
+
+  vsState = {
+    queue,
+    current: 0,
+    score: 0,
+    totalAnswered: 0,
+    wrongQueue: [],
+    startTime: 0,
+    answered: false,
+    results: [],
+    sessionId: 99
+  };
+  showPage('vocabsession');
+  renderVocabQuestion();
+}
+
+// 헷갈리는 선택지 생성: 비슷한 병음/성조/의미/글자 기반
+function getConfusingOptions(target, count) {
+  const pool = hskWords.filter(x => x.id !== target.id && x.sentence);
+  const tPy = normalizePinyinBase(target.pinyin);
+  const tChars = [...target.chinese];
+
+  // Score each candidate for confusion potential
+  const scored = pool.map(w => {
+    let score = 0;
+    const wPy = normalizePinyinBase(w.pinyin);
+    // 같은 성모 (initial consonant)
+    if (tPy.length > 0 && wPy.length > 0 && tPy[0] === wPy[0]) score += 2;
+    // 비슷한 병음 (edit distance)
+    if (tPy === wPy) score += 5; // 성조만 다른 경우
+    else if (tPy.length > 2 && wPy.includes(tPy.slice(0, -1))) score += 3;
+    // 공유 한자
+    const wChars = [...w.chinese];
+    const shared = tChars.filter(c => wChars.includes(c)).length;
+    score += shared * 4;
+    // 같은 글자수
+    if (w.chinese.length === target.chinese.length) score += 1;
+    // 같은 급수
+    if (w.level === target.level) score += 1;
+    // 비슷한 의미 카테고리 (같은 품사 키워드)
+    if (w.pos && target.pos && w.pos === target.pos) score += 1;
+    return { word: w, score };
+  });
+
+  // Sort by score desc, then pick top candidates with some randomness
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored.slice(0, Math.min(count * 4, 20));
+  top.sort(() => Math.random() - 0.5);
+  return top.slice(0, count).map(s => s.word);
+}
+
+function normalizePinyinBase(py) {
+  return (py || '').toLowerCase()
+    .replace(/[āáǎà]/g, 'a').replace(/[ēéěè]/g, 'e').replace(/[īíǐì]/g, 'i')
+    .replace(/[ōóǒò]/g, 'o').replace(/[ūúǔù]/g, 'u').replace(/[ǖǘǚǜ]/g, 'v')
+    .replace(/[^a-z]/g, '');
+}
+
 function confirmQuitVocab() {
   if (confirm('학습을 종료할까요?')) {
     showPage('vocab');
@@ -2864,11 +3067,8 @@ function renderVocabQuestion() {
   vsState.answered = false;
   vsState.startTime = Date.now();
 
-  // Build 4 options: 1 correct + 3 wrong from same level (prefer) or nearby
-  const pool = hskWords.filter(x => x.id !== w.id && x.sentence);
-  const sameLvl = pool.filter(x => x.level === w.level).sort(() => Math.random() - 0.5);
-  const otherLvl = pool.filter(x => x.level !== w.level).sort(() => Math.random() - 0.5);
-  const wrongs = [...sameLvl, ...otherLvl].slice(0, 3);
+  // Build 4 options: 1 correct + 3 confusing wrong options
+  const wrongs = getConfusingOptions(w, 3);
   const options = [w, ...wrongs].sort(() => Math.random() - 0.5);
 
   const sent = w.sentence;
@@ -2880,7 +3080,7 @@ function renderVocabQuestion() {
   content.innerHTML = `
     <div class="sq-ko">${esc(sent.ko)}</div>
     <div class="sq-sentence">${esc(sent.blank).replace('___', '<span class="sq-blank" id="sq-blank">\u3000\u3000</span>')}</div>
-    <div style="font-size:13px; color:var(--warning); text-align:center; margin-bottom:12px; font-style:italic;">${toPinyin(sent.zh)}</div>
+    <div id="vs-sentence-pinyin" style="font-size:13px; color:var(--warning); text-align:center; margin-bottom:12px; font-style:italic; display:none;">${toPinyin(sent.zh)}</div>
     ${isIhap(w) ? `<div style="text-align:center;margin-bottom:8px;"><span style="font-size:11px;padding:3px 10px;background:#f472b622;color:#f472b6;border-radius:6px;font-weight:700;">이합동사 離合動詞</span></div>` : ''}
     <div class="mc-grid" id="mc-grid">
       ${options.map(o => `
@@ -2942,6 +3142,10 @@ function answerVocab(el, isCorrect, wordId) {
     const koEl = document.querySelector('.sq-ko');
     if (koEl) koEl.innerHTML += buildIhapNote(w.chinese);
   }
+
+  // Show sentence pinyin after answering
+  const pinyinEl = document.getElementById('vs-sentence-pinyin');
+  if (pinyinEl) pinyinEl.style.display = 'block';
 
   // Highlight options and reveal all meanings
   document.querySelectorAll('#mc-grid .mc-option').forEach(btn => {
