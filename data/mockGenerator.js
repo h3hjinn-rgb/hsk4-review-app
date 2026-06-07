@@ -190,7 +190,9 @@
    * 원문이 그대로 나오지 않고, 의미를 바꿔 서술한 별도의 문장이 제시됨.
    */
   function generateOXQuestion(hskWords) {
-    const candidates = wordsWithSentences(hskWords);
+    const all = wordsWithSentences(hskWords).filter(w => w.level >= 3);
+    const l4 = all.filter(w => w.level === 4);
+    const candidates = Math.random() < 0.8 && l4.length > 0 ? l4 : all;
     const word = pickOne(candidates);
     const sentence = word.sentence.zh;
     const korean = word.sentence.ko;
@@ -284,7 +286,9 @@
    * 자연스러운 질문-대답 패턴의 대화 생성
    */
   function generateDialogueQuestion(hskWords) {
-    const candidates = wordsWithSentences(hskWords);
+    const all = wordsWithSentences(hskWords).filter(w => w.level >= 3);
+    const l4 = all.filter(w => w.level === 4);
+    const candidates = Math.random() < 0.8 && l4.length > 0 ? l4 : all;
 
     // 대화 템플릿에 맞는 단어 찾기
     let w2 = null, template = null;
@@ -486,61 +490,84 @@
   }
 
   /**
+   * 문장 순서 배열: 단어의 실제 예문을 중심으로 앞뒤 문맥 문장 생성
+   * 접속사/시간 표현이 순서 단서 역할
+   */
+  const CONTEXT_BEFORE = [
+    (sent) => `因为最近比较忙。`,
+    (sent) => `虽然大家都不太同意。`,
+    (sent) => `他想了很长时间。`,
+    (sent) => `听了朋友的建议以后。`,
+    (sent) => `到了那儿以后。`,
+    (sent) => `一开始他不太习惯。`,
+    (sent) => `上个周末天气很好。`,
+    (sent) => `他在网上查了很多资料。`,
+    (sent) => `考虑了很久以后。`,
+    (sent) => `虽然他很累。`,
+    (sent) => `刚到中国的时候。`,
+    (sent) => `放假以前他就计划好了。`,
+  ];
+  const CONTEXT_AFTER = [
+    (sent) => `所以他觉得非常满意。`,
+    (sent) => `结果比他想象的还要好。`,
+    (sent) => `从那以后他就改变了想法。`,
+    (sent) => `大家都觉得他做得很对。`,
+    (sent) => `后来他把这件事告诉了朋友。`,
+    (sent) => `因此他决定以后继续这样做。`,
+    (sent) => `最后他终于成功了。`,
+    (sent) => `但是他还是觉得不够。`,
+    (sent) => `于是他又重新开始了。`,
+    (sent) => `这件事对他影响很大。`,
+    (sent) => `现在回想起来，他很感谢那次经历。`,
+    (sent) => `他希望下次能做得更好。`,
+  ];
+
+  /**
    * Type B: Sentence ordering (문장 순서 배열)
-   * Pick 3 sentences and assign a logical order.
+   * 접속사/시간 표현/논리 단서가 포함된 3문장을 올바른 순서로 배열
    */
   function generateSentenceOrderQuestion(hskWords) {
-    const candidates = wordsWithSentences(hskWords);
+    // 3~4급 단어의 실제 예문을 중심으로 앞뒤 문맥 구성 (80% 4급)
+    const candidates = wordsWithSentences(hskWords).filter(w => w.level >= 3 && w.sentence.zh.length >= 5);
+    const l4 = candidates.filter(w => w.level === 4);
+    const pool = Math.random() < 0.8 && l4.length > 0 ? l4 : candidates;
+    const word = pickOne(pool);
 
-    // Try to find sentences from same topic
-    const w1 = pickOne(candidates);
-    const topic = getWordTopic(w1);
-    let pool = candidates.filter(w => w.id !== w1.id && getWordTopic(w) === topic);
-
-    if (pool.length < 2) {
-      pool = candidates.filter(w => w.id !== w1.id);
-    }
-
-    const others = pickRandom(pool, 2);
-    const threeWords = [w1, ...others];
-
-    // Use temporal/logical ordering heuristics
-    // Sort by sentence complexity (shorter = simpler = earlier context setting)
-    const sorted = threeWords.slice().sort((a, b) => {
-      // Prefer: introduction (shorter/simpler) -> detail -> conclusion
-      return a.sentence.zh.length - b.sentence.zh.length;
-    });
+    // 실제 예문을 가운데(2번째)에 두고, 앞뒤에 문맥 문장 배치
+    const before = pickOne(CONTEXT_BEFORE)(word.sentence.zh);
+    const middle = word.sentence.zh;
+    const after = pickOne(CONTEXT_AFTER)(word.sentence.zh);
+    const correctSentences = [before, middle, after];
 
     const labels = ['A', 'B', 'C'];
-
-    // Shuffle for display (this is what the student sees)
+    // 셔플해서 표시 (학생이 보는 순서)
     const displayOrder = shuffle([0, 1, 2]);
-    const sentences = displayOrder.map((sortedIdx, dispIdx) => ({
+    const sentences = displayOrder.map((correctIdx, dispIdx) => ({
       label: labels[dispIdx],
-      text: sorted[sortedIdx].sentence.zh,
-      korean: sorted[sortedIdx].sentence.ko,
-      _correctPos: sortedIdx // 0-based position in correct order
+      text: correctSentences[correctIdx],
+      korean: '', // 정답 전에는 한국어 안 보임
+      _correctPos: correctIdx
     }));
 
-    // Build answer string: correct order expressed in display labels
-    // e.g., if display A is correct pos 2, B is pos 0, C is pos 1 => answer "BCA"
+    // 정답: 올바른 순서를 표시 라벨로 변환
     const answerArr = new Array(3);
     for (const s of sentences) {
       answerArr[s._correctPos] = s.label;
     }
     const answer = answerArr.join('');
 
-    // Build explanation
+    // 해설: 올바른 순서 + 각 문장 해석
     const explanationParts = answerArr.map((label, pos) => {
       const sent = sentences.find(s => s.label === label);
-      return `${pos + 1}. ${label}: ${sent.text} (${sent.korean})`;
+      return `${pos + 1}. ${label}: ${sent.text}`;
     });
 
     return {
       type: 'sentence_order',
-      sentences: sentences.map(s => ({ label: s.label, text: s.text, korean: s.korean })),
+      sentences: sentences.map(s => ({ label: s.label, text: s.text })),
       answer: answer,
-      explanation: `올바른 순서: ${answer}\n${explanationParts.join('\n')}`
+      explanation: `올바른 순서: ${answer}\n${explanationParts.join('\n')}\n\n핵심 단어: ${word.chinese}(${word.pinyin}) = ${word.meaning}`,
+      word: word
     };
   }
 
