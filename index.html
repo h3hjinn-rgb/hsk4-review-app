@@ -520,39 +520,38 @@ body {
     </div>
 
     <!-- Section 2: 취약 단어 복습 -->
-    <div class="today-card" id="today-weak-card" data-done="false" onclick="startWeakReview()" style="background: linear-gradient(135deg, #4a1942, #e94560);">
+    <div class="today-card" id="today-weak-card" data-done="false" onclick="startWeakReview()" style="background: var(--card);">
       <div class="card-done-check">-</div>
-      <div class="card-title" style="font-size:17px; color:#fff;">취약 단어 복습</div>
-      <div class="card-sub" style="color:rgba(255,255,255,0.75);" id="home-weak-info">오답률 높은 단어 50개</div>
-      <button id="weak-review-again-btn" class="btn" onclick="event.stopPropagation(); startWeakReview();" style="display:none; margin-top:10px; background:rgba(255,255,255,0.2); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:13px; cursor:pointer;">한번더 복습하기</button>
+      <div class="card-title">취약 단어 복습</div>
+      <div class="card-sub" id="home-weak-info">오답률 높은 단어 50개</div>
+      <button id="weak-review-again-btn" class="btn" onclick="event.stopPropagation(); startWeakReview();" style="display:none; margin-top:10px; background:var(--card2); color:var(--text); border:none; padding:8px 16px; border-radius:8px; font-size:13px; cursor:pointer;">한번더 복습하기</button>
     </div>
 
     <!-- Section 3: 모의고사 - 듣기 -->
-    <div class="today-card" id="today-listening-card" data-done="false" onclick="startMockTest('listening')" style="background: linear-gradient(135deg, #0f3460, #1a1a4e);">
+    <div class="today-card" id="today-listening-card" data-done="false" onclick="startMockTest('listening')" style="background: var(--card);">
       <div class="card-done-check">-</div>
-      <div style="font-size:28px; margin-bottom:6px;">🔊</div>
-      <div class="card-title" style="font-size:17px; color:#fff;">모의고사 - 듣기</div>
-      <div class="card-sub" style="color:rgba(255,255,255,0.7);">10문제 · 약 10분</div>
+      <div class="card-title">모의고사 - 듣기</div>
+      <div class="card-sub">10문제 · 약 10분</div>
     </div>
 
     <!-- Section 4: 모의고사 - 쓰기 -->
-    <div class="today-card" id="today-writing-card" data-done="false" onclick="startMockTest('writing')" style="background: linear-gradient(135deg, #1a3a2a, #2d5a3d);">
+    <div class="today-card" id="today-writing-card" data-done="false" onclick="startMockTest('writing')" style="background: var(--card);">
       <div class="card-done-check">-</div>
-      <div class="card-title" style="font-size:17px; color:#fff;">모의고사 - 쓰기</div>
-      <div class="card-sub" style="color:rgba(255,255,255,0.7);">10문제 · 약 12분</div>
+      <div class="card-title">모의고사 - 쓰기</div>
+      <div class="card-sub">10문제 · 약 12분</div>
     </div>
 
     <!-- Section 5: 모의고사 - 독해 -->
-    <div class="today-card" id="today-reading-card" data-done="false" onclick="startMockTest('reading')" style="background: linear-gradient(135deg, #3a2a1a, #5a4a2d);">
+    <div class="today-card" id="today-reading-card" data-done="false" onclick="startMockTest('reading')" style="background: var(--card);">
       <div class="card-done-check">-</div>
-      <div class="card-title" style="font-size:17px; color:#fff;">모의고사 - 독해</div>
-      <div class="card-sub" style="color:rgba(255,255,255,0.7);">10문제 · 약 12분</div>
+      <div class="card-title">모의고사 - 독해</div>
+      <div class="card-sub">10문제 · 약 12분</div>
     </div>
 
     <!-- Section 6: 오답 복습 -->
-    <div class="today-card" id="today-wrong-card" data-done="false" onclick="showPage('wrong')" style="background: var(--card); border:1px solid rgba(248,113,113,0.2);">
+    <div class="today-card" id="today-wrong-card" data-done="false" onclick="showPage('wrong')" style="background: var(--card);">
       <div class="card-done-check">-</div>
-      <div class="card-title" style="color:var(--danger);">오답 복습</div>
+      <div class="card-title">오답 복습</div>
       <div class="card-sub" id="home-wrong-count">0개</div>
     </div>
 
