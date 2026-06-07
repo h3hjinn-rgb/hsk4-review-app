@@ -4027,7 +4027,7 @@ if ('serviceWorker' in navigator) {
 
 // 버전 체크: 네트워크에서 직접 version.json을 가져와 현재 버전과 비교
 (function checkUpdate() {
-  const currentV = '24';
+  const currentV = '25';
   fetch('version.json?_=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(data => {
     if (data.v && data.v !== currentV) {
       // 새 버전 발견 - SW 캐시 전부 삭제 후 새로고침
