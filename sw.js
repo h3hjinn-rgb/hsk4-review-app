@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hsk4-v20';
+const CACHE_NAME = 'hsk4-v21';
 const ASSETS = [
   '/',
   '/index.html',
@@ -9,7 +9,6 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  // 즉시 활성화 - 이전 SW 대기하지 않음
   self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then(c => c.addAll(ASSETS))
@@ -17,7 +16,6 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  // 모든 구 캐시 삭제 + 즉시 클라이언트 제어
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
@@ -25,9 +23,8 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Network first, fallback to cache
+// Network first - always try network, only fallback to cache when offline
 self.addEventListener('fetch', e => {
-  // HTML/JS는 항상 네트워크 우선
   e.respondWith(
     fetch(e.request).then(res => {
       if (res.ok) {
@@ -37,4 +34,15 @@ self.addEventListener('fetch', e => {
       return res;
     }).catch(() => caches.match(e.request))
   );
+});
+
+// Listen for message to force clear cache
+self.addEventListener('message', e => {
+  if (e.data === 'FORCE_UPDATE') {
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).then(() => {
+      self.registration.unregister().then(() => {
+        e.source.postMessage('CLEARED');
+      });
+    });
+  }
 });
