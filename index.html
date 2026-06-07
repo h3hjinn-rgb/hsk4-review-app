@@ -1253,12 +1253,51 @@ function showQuizAnswer() {
   const feedback = document.getElementById('quiz-feedback');
   feedback.style.display = 'block';
   feedback.style.background = 'var(--card2)';
-  const answersHtml = q.pinyins.map((p, i) => {
+
+  const answers = q.pinyins.map(p => {
     const ch = lookupChineseByPinyin(p, q.chineseTemplate);
-    return `<span style="font-size:18px; font-weight:600; color:var(--success);">${ch || '?'}</span> <span style="font-size:12px; color:var(--warning);">${p}</span>`;
-  }).join(' &nbsp;|&nbsp; ');
-  feedback.innerHTML = `<div style="font-size:13px; color:var(--text2); margin-bottom:4px;">정답:</div>
-    <div style="margin-bottom:8px;">${answersHtml}</div>`;
+    return { correctChinese: ch, expectedPinyin: p };
+  });
+
+  // 빈칸에 정답 채워서 완성된 문장
+  let bi = 0;
+  const tabCount = (q.chineseTemplate.match(/\t+/g) || []).length;
+  const extraBlanks = q.pinyins.length - tabCount;
+  const fillSpan = (a) => `<span style="color:var(--success); font-weight:700; border-bottom:2px solid var(--success); padding:0 2px;">${a.correctChinese || '?'}</span>`;
+  let prefix = '';
+  if (extraBlanks > 0) { for (let e = 0; e < extraBlanks; e++) prefix += fillSpan(answers[bi++]); }
+  const filledSentence = prefix + q.chineseTemplate.replace(/\t+/g, () => fillSpan(answers[bi++]));
+
+  // 단어 해설
+  const wordExplainHtml = answers.map((a, i) => {
+    const word = hskWords.find(w => w.chinese === a.correctChinese);
+    if (!word) return '';
+    return `
+      <div style="padding:6px 10px; ${i > 0 ? 'border-top:1px solid #333;' : ''} display:flex; gap:10px; align-items:flex-start;">
+        <span style="font-size:10px; background:var(--accent); color:white; padding:1px 6px; border-radius:4px; font-weight:700;">${i+1}</span>
+        <div>
+          <span style="font-size:18px; font-weight:700; color:var(--success);">${a.correctChinese}</span>
+          <span style="font-size:13px; color:var(--warning); margin-left:4px;">${a.expectedPinyin}</span>
+          <div style="font-size:13px; color:var(--text);">${word.meaning}</div>
+          ${word.pos ? `<div style="font-size:11px; color:var(--text2);">[${word.pos}]</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  let ri2 = 0;
+  const fullPinyin = toPinyin(q.chineseTemplate.replace(/\t+/g, () => answers[ri2] ? answers[ri2++].correctChinese || '' : ''));
+
+  feedback.innerHTML = `
+    <div style="background:var(--bg); border-radius:10px; padding:12px; margin-bottom:10px;">
+      <div style="font-size:11px; color:var(--text2); margin-bottom:6px;">완성된 문장</div>
+      <div style="font-size:18px; line-height:1.8; margin-bottom:6px;">${filledSentence}</div>
+      <div style="font-size:13px; color:var(--warning); font-style:italic;">${fullPinyin}</div>
+      <div style="font-size:13px; color:var(--text2); margin-top:4px;">${q.korean}</div>
+    </div>
+    <div style="background:var(--bg); border-radius:10px; padding:8px;">
+      <div style="font-size:11px; color:var(--text2); padding:4px 10px;">단어 해설</div>
+      ${wordExplainHtml}
+    </div>`;
 }
 
 function normalizePinyinForCompare(str) {
@@ -1334,33 +1373,64 @@ function checkQuizAnswer() {
   feedback.style.display = 'block';
   feedback.style.background = 'var(--card2)';
 
-  const detailHtml = results.map((r, i) => `
-    <div style="padding:8px 0; ${i > 0 ? 'border-top:1px solid #333;' : ''}">
-      <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-        <span style="font-size:11px; color:var(--text2); min-width:16px;">${i+1}</span>
-        <span style="font-size:11px; padding:2px 6px; border-radius:4px; background:${r.isCorrect ? '#22c55e22; color:var(--success)' : '#ef444422; color:var(--danger)'};">${r.isCorrect ? '정답' : '오답'}</span>
-      </div>
-      <div style="display:flex; gap:8px; margin-left:22px;">
-        <div style="flex:1; padding:6px 10px; background:${r.isCorrect ? '#22c55e11' : '#ef444411'}; border-radius:8px; border:1px solid ${r.isCorrect ? '#22c55e33' : '#ef444433'};">
-          <div style="font-size:10px; color:var(--text2); margin-bottom:2px;">내 답</div>
-          <div style="font-size:18px; font-weight:600; color:${r.isCorrect ? 'var(--success)' : 'var(--danger)'};">${r.userInput || '(미입력)'}</div>
-          ${r.userInput && !r.isCorrect ? `<div style="font-size:11px; color:var(--text2);">${r.userPinyin || ''}</div>` : ''}
+  // 빈칸에 정답 채워서 완성된 문장 표시
+  const filledSentence = (() => {
+    const blankFill = (r, i) => {
+      const color = r.isCorrect ? 'var(--success)' : 'var(--danger)';
+      const correct = r.correctChinese || '?';
+      if (r.isCorrect) {
+        return `<span style="color:var(--success); font-weight:700; border-bottom:2px solid var(--success); padding:0 2px;">${correct}</span>`;
+      }
+      return `<span style="position:relative; display:inline-block;">` +
+        (r.userInput ? `<span style="color:var(--danger); text-decoration:line-through; font-size:14px; opacity:0.6;">${r.userInput}</span> ` : '') +
+        `<span style="color:var(--success); font-weight:700; border-bottom:2px solid var(--success); padding:0 2px;">${correct}</span></span>`;
+    };
+    let bi = 0;
+    const tabCount = (q.chineseTemplate.match(/\t+/g) || []).length;
+    const extraBlanks = q.pinyins.length - tabCount;
+    let prefix = '';
+    if (extraBlanks > 0) {
+      for (let e = 0; e < extraBlanks; e++) prefix += blankFill(results[bi], bi++) + '';
+    }
+    return prefix + q.chineseTemplate.replace(/\t+/g, () => blankFill(results[bi], bi++));
+  })();
+
+  // 각 정답 단어의 해설 (뜻 + 병음 + 예문)
+  const wordExplainHtml = results.map((r, i) => {
+    const word = hskWords.find(w => w.chinese === r.correctChinese);
+    if (!word) return '';
+    return `
+      <div style="padding:8px 10px; ${i > 0 ? 'border-top:1px solid #333;' : ''} display:flex; gap:10px; align-items:flex-start;">
+        <div style="min-width:20px; text-align:center;">
+          <span style="font-size:10px; background:var(--accent); color:white; padding:1px 6px; border-radius:4px; font-weight:700;">${i+1}</span>
         </div>
-        <div style="flex:1; padding:6px 10px; background:#22c55e11; border-radius:8px; border:1px solid #22c55e33;">
-          <div style="font-size:10px; color:var(--text2); margin-bottom:2px;">정답</div>
-          <div style="font-size:18px; font-weight:600; color:var(--success);">${r.correctChinese || '?'}</div>
-          <div style="font-size:11px; color:var(--warning);">${r.expectedPinyin}</div>
+        <div style="flex:1;">
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+            <span style="font-size:18px; font-weight:700; color:${r.isCorrect ? 'var(--success)' : 'var(--danger)'};">${r.correctChinese}</span>
+            <span style="font-size:13px; color:var(--warning);">${r.expectedPinyin}</span>
+            ${!r.isCorrect && r.userInput ? `<span style="font-size:11px; color:var(--danger); text-decoration:line-through;">${r.userInput}</span>` : ''}
+          </div>
+          <div style="font-size:13px; color:var(--text);">${word.meaning}</div>
+          ${word.pos ? `<div style="font-size:11px; color:var(--text2); margin-top:2px;">[${word.pos}]</div>` : ''}
         </div>
-      </div>
-    </div>
-  `).join('');
+      </div>`;
+  }).join('');
 
   feedback.innerHTML = `
-    <div style="font-size:16px; font-weight:600; margin-bottom:8px; color:${allCorrect ? 'var(--success)' : 'var(--danger)'};">
+    <div style="font-size:16px; font-weight:600; margin-bottom:10px; color:${allCorrect ? 'var(--success)' : 'var(--danger)'};">
       ${allCorrect ? '정답!' : `${correctCount}/${results.length} 맞음`}
     </div>
-    ${detailHtml}
-    <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="gradeQuiz(${allCorrect})">다음</button>
+    <div style="background:var(--bg); border-radius:10px; padding:12px; margin-bottom:12px;">
+      <div style="font-size:11px; color:var(--text2); margin-bottom:6px;">완성된 문장</div>
+      <div style="font-size:18px; line-height:1.8; margin-bottom:6px;">${filledSentence}</div>
+      <div style="font-size:13px; color:var(--warning); font-style:italic;">${(() => { let ri=0; return toPinyin(q.chineseTemplate.replace(/\t+/g, () => results[ri] ? results[ri++].correctChinese || '' : '')); })()}</div>
+      <div style="font-size:13px; color:var(--text2); margin-top:4px;">${q.korean}</div>
+    </div>
+    <div style="background:var(--bg); border-radius:10px; padding:8px; margin-bottom:12px;">
+      <div style="font-size:11px; color:var(--text2); padding:4px 10px;">단어 해설</div>
+      ${wordExplainHtml}
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="gradeQuiz(${allCorrect})">다음</button>
   `;
 }
 
