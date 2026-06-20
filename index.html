@@ -552,11 +552,14 @@ body {
   margin-left: auto; font-size: 12px; color: var(--text2);
 }
 .ibt-pdf-view {
-  background: #fff; margin: 8px; border-radius: 8px; overflow: hidden;
-  position: relative;
+  background: #fff; margin: 8px; border-radius: 8px;
+  overflow: auto; -webkit-overflow-scrolling: touch;
+  position: relative; max-height: 60vh;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 .ibt-pdf-view canvas {
-  width: 100% !important; height: auto !important; display: block;
+  width: 100%; height: auto; display: block;
+  transform-origin: 0 0; transition: none;
 }
 .ibt-answer-panel {
   position: fixed; bottom: 72px; left: 0; right: 0;
@@ -619,6 +622,10 @@ body {
   lang: zh-CN;
 }
 .ibt-writing-input:focus { border-color: var(--accent); }
+.ibt-pdf-nav-btn {
+  background: none; border: 1px solid #555; color: var(--text);
+  padding: 4px 12px; border-radius: 6px; font-size: 14px; cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -4491,6 +4498,8 @@ async function startIbtExam(examId) {
     userAnswers: new Array(questions.length).fill(null),
     currentQ: 0,
     currentSection: 0,
+    currentPdfPage: 2,
+    totalPdfPages: 0,
     timeLeft: sections[0].time,
     pdfLoaded: false,
     pdfPages: {},
@@ -4514,13 +4523,14 @@ async function startIbtExam(examId) {
   }
 
   startIbtTimer();
-  renderIbtSection();
+  renderIbtSection(true);
 }
 
 async function loadIbtPdf(examId) {
   try {
     const pdf = await pdfjsLib.getDocument('data/mock/' + examId + '.pdf').promise;
     ibtState.pdf = pdf;
+    ibtState.totalPdfPages = pdf.numPages - 2; // exclude answer pages (last 2)
     ibtState.pdfLoaded = true;
     renderIbtPdfPage();
   } catch(e) { console.error('PDF load error:', e); }
@@ -4528,26 +4538,36 @@ async function loadIbtPdf(examId) {
 
 async function renderIbtPdfPage() {
   if (!ibtState || !ibtState.pdfLoaded) return;
-  const q = ibtState.questions[ibtState.currentQ];
-  // Map question number to approximate PDF page
-  // HSK4 PDF structure: page 1 = cover, page 2+ = questions
-  let pdfPage = getIbtPdfPage(q.num, q.section);
+  const p = ibtState.currentPdfPage;
+  const maxPage = ibtState.totalPdfPages;
 
   const container = document.getElementById('ibt-body');
-  // Clear previous
-  container.innerHTML = '<div id="ibt-pdf-canvas-wrap" class="ibt-pdf-view"></div>';
+  // Keep audio player if exists, rebuild the rest
+  const audioEl = container.querySelector('#ibt-audio-player-wrap');
+  const audioHtml = audioEl ? audioEl.outerHTML : '';
+
+  const prevDisabled = p <= 1 ? 'disabled style="opacity:.3;pointer-events:none;"' : '';
+  const nextDisabled = p >= maxPage ? 'disabled style="opacity:.3;pointer-events:none;"' : '';
+  container.innerHTML = audioHtml + `
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px; background:var(--card); margin:4px 8px; border-radius:8px; gap:4px;">
+      <button onclick="ibtPdfPrev()" class="ibt-pdf-nav-btn" ${prevDisabled}>&#x25C0;</button>
+      <button onclick="ibtPdfZoom(-0.5)" class="ibt-pdf-nav-btn">-</button>
+      <span style="font-size:12px; color:var(--text2); white-space:nowrap;">${p} / ${maxPage}</span>
+      <button onclick="ibtPdfZoom(0.5)" class="ibt-pdf-nav-btn">+</button>
+      <button onclick="ibtPdfNext()" class="ibt-pdf-nav-btn" ${nextDisabled}>&#x25B6;</button>
+    </div>
+    <div id="ibt-pdf-canvas-wrap" class="ibt-pdf-view"></div>`;
   const wrap = document.getElementById('ibt-pdf-canvas-wrap');
 
-  // Render current and next page
-  for (let p = pdfPage; p <= Math.min(pdfPage + 1, ibtState.pdf.numPages - 2); p++) {
-    if (p < 1 || p > ibtState.pdf.numPages) continue;
+  // Render current page
+  if (p >= 1 && p <= ibtState.pdf.numPages) {
     const cacheKey = 'page_' + p;
     let canvas;
     if (ibtState.pdfPages[cacheKey]) {
-      canvas = ibtState.pdfPages[cacheKey].cloneNode(true);
-      const ctx = canvas.getContext('2d');
-      const origCanvas = ibtState.pdfPages[cacheKey];
-      ctx.drawImage(origCanvas, 0, 0);
+      canvas = document.createElement('canvas');
+      canvas.width = ibtState.pdfPages[cacheKey].width;
+      canvas.height = ibtState.pdfPages[cacheKey].height;
+      canvas.getContext('2d').drawImage(ibtState.pdfPages[cacheKey], 0, 0);
     } else {
       const page = await ibtState.pdf.getPage(p);
       const viewport = page.getViewport({ scale: 2.0 });
@@ -4556,7 +4576,6 @@ async function renderIbtPdfPage() {
       canvas.height = viewport.height;
       const ctx = canvas.getContext('2d');
       await page.render({ canvasContext: ctx, viewport }).promise;
-      // Cache
       const cacheCanvas = document.createElement('canvas');
       cacheCanvas.width = canvas.width;
       cacheCanvas.height = canvas.height;
@@ -4567,34 +4586,27 @@ async function renderIbtPdfPage() {
   }
 }
 
-function getIbtPdfPage(qNum, section) {
-  // Approximate page mapping based on HSK4 PDF structure
-  // Page 1: cover/instructions, Page 2+: questions
-  if (section === '听力') {
-    if (qNum <= 10) return 2; // Part 1
-    if (qNum <= 15) return 3; // Part 2 start
-    if (qNum <= 20) return 4;
-    if (qNum <= 25) return 5;
-    if (qNum <= 30) return 6; // Part 3 start
-    if (qNum <= 33) return 7;
-    if (qNum <= 37) return 8;
-    if (qNum <= 41) return 9;
-    return 10;
-  } else if (section === '阅读') {
-    if (qNum <= 50) return 11;
-    if (qNum <= 55) return 12;
-    if (qNum <= 58) return 13;
-    if (qNum <= 60) return 14;
-    if (qNum <= 62) return 15;
-    if (qNum <= 65) return 16;
-    if (qNum <= 70) return 17;
-    if (qNum <= 75) return 18;
-    if (qNum <= 80) return 19;
-    return 20;
-  } else {
-    if (qNum <= 90) return 21;
-    if (qNum <= 95) return 22;
-    return 22; // writing part 2 - pictures
+function ibtPdfPrev() {
+  if (!ibtState || ibtState.currentPdfPage <= 1) return;
+  ibtState.currentPdfPage--;
+  ibtState.pdfZoom = 1;
+  renderIbtPdfPage();
+}
+
+function ibtPdfNext() {
+  if (!ibtState || ibtState.currentPdfPage >= ibtState.totalPdfPages) return;
+  ibtState.currentPdfPage++;
+  ibtState.pdfZoom = 1;
+  renderIbtPdfPage();
+}
+
+function ibtPdfZoom(delta) {
+  if (!ibtState) return;
+  const zoom = (ibtState.pdfZoom || 1) + delta;
+  ibtState.pdfZoom = Math.max(1, Math.min(3, zoom));
+  const canvas = document.querySelector('#ibt-pdf-canvas-wrap canvas');
+  if (canvas) {
+    canvas.style.width = (ibtState.pdfZoom * 100) + '%';
   }
 }
 
@@ -4615,7 +4627,7 @@ function startIbtTimer() {
   }, 1000);
 }
 
-function renderIbtSection() {
+function renderIbtSection(refreshPdf) {
   if (!ibtState) return;
   const q = ibtState.questions[ibtState.currentQ];
   document.getElementById('ibt-section-label').textContent = q.section + ' ' + q.part;
@@ -4623,7 +4635,9 @@ function renderIbtSection() {
 
   // Render answer panel
   renderIbtAnswerPanel();
-  renderIbtPdfPage();
+
+  // Only refresh PDF on section change or explicit request
+  if (refreshPdf) renderIbtPdfPage();
 
   // Audio for listening section
   if (q.section === '听力' && !ibtState.audioPlayed) {
@@ -4637,7 +4651,7 @@ function renderIbtSection() {
           &#x25B6; 듣기 시작
         </button>
         <div style="font-size:12px; color:var(--text2); margin-top:12px;">실제 시험처럼 음성은 한 번만 재생됩니다</div>
-      </div>` + body.innerHTML;
+      </div>`;
   }
 }
 
@@ -4648,21 +4662,24 @@ function playIbtAudio() {
   ibtState.audio = audio;
   audio.play();
 
-  // Replace audio start UI with player
+  // Show PDF with audio player on top
+  renderIbtPdfPage();
+
+  // Prepend audio player
   const body = document.getElementById('ibt-body');
-  const firstChild = body.firstElementChild;
-  if (firstChild) {
-    firstChild.innerHTML = `
-      <div style="text-align:center; padding:12px;">
-        <div style="display:flex; align-items:center; justify-content:center; gap:12px;">
-          <button onclick="ibtState.audio.paused ? ibtState.audio.play() : ibtState.audio.pause()" style="width:40px; height:40px; border-radius:50%; border:none; background:var(--accent); color:#fff; font-size:16px; cursor:pointer;" id="ibt-audio-btn">&#x23F8;</button>
-          <div style="flex:1; max-width:200px;">
-            <input type="range" id="ibt-audio-seek" min="0" max="100" value="0" style="width:100%; accent-color:var(--accent);">
-          </div>
-          <span id="ibt-audio-time" style="font-size:12px; color:var(--text2); min-width:40px;">0:00</span>
+  const playerDiv = document.createElement('div');
+  playerDiv.id = 'ibt-audio-player-wrap';
+  playerDiv.innerHTML = `
+    <div style="text-align:center; padding:8px 12px; background:var(--card); margin:4px 8px; border-radius:8px;">
+      <div style="display:flex; align-items:center; justify-content:center; gap:12px;">
+        <button onclick="ibtState.audio.paused ? ibtState.audio.play() : ibtState.audio.pause()" style="width:36px; height:36px; border-radius:50%; border:none; background:var(--accent); color:#fff; font-size:14px; cursor:pointer;" id="ibt-audio-btn">&#x23F8;</button>
+        <div style="flex:1; max-width:200px;">
+          <input type="range" id="ibt-audio-seek" min="0" max="100" value="0" style="width:100%; accent-color:var(--accent);">
         </div>
-      </div>`;
-  }
+        <span id="ibt-audio-time" style="font-size:12px; color:var(--text2); min-width:40px;">0:00</span>
+      </div>
+    </div>`;
+  body.insertBefore(playerDiv, body.firstChild);
 
   audio.addEventListener('timeupdate', () => {
     const seek = document.getElementById('ibt-audio-seek');
@@ -4723,8 +4740,11 @@ function renderIbtAnswerPanel() {
       <div class="ibt-answer-row" style="justify-content:center; gap:6px; flex-wrap:wrap;">
         <span style="font-size:13px; color:var(--text2); min-width:36px;">${q.num}.</span>
         <span style="font-size:14px; color:var(--accent); min-width:50px;">${cur || '___'}</span>
-        ${['A','B','C'].map(l => `<button class="ibt-abcd-btn" onclick="appendIbtOrder(${idx}, '${l}')" style="width:32px;height:32px;">${l}</button>`).join('')}
-        <button class="ibt-abcd-btn" onclick="clearIbtOrder(${idx})" style="width:32px;height:32px;font-size:10px;background:var(--danger)22;border-color:#ef4444;">C</button>
+        ${['A','B','C'].map(l => {
+          const used = cur.includes(l);
+          return `<button class="ibt-abcd-btn${used ? ' selected' : ''}" onclick="appendIbtOrder(${idx}, '${l}')" style="width:32px;height:32px;${used ? 'opacity:.4;pointer-events:none;' : ''}">${l}</button>`;
+        }).join('')}
+        <button class="ibt-abcd-btn" onclick="clearIbtOrder(${idx})" style="width:32px;height:32px;font-size:16px;background:rgba(239,68,68,0.13);border-color:#ef4444;">&#x21BA;</button>
       </div>`;
   } else if (q.type === 'writing') {
     const cur = ibtState.userAnswers[idx] || '';
@@ -4782,13 +4802,14 @@ function goIbtQuestion(idx) {
   const oldSection = ibtState.questions[ibtState.currentQ].section;
   ibtState.currentQ = idx;
   const newSection = ibtState.questions[ibtState.currentQ].section;
+  let sectionChanged = false;
   if (oldSection !== newSection) {
-    // Section changed - update timer
+    sectionChanged = true;
     const secIdx = ibtState.sections.findIndex(s => s.name === newSection);
     ibtState.currentSection = secIdx;
     ibtState.timeLeft = ibtState.sections[secIdx].time;
   }
-  renderIbtSection();
+  renderIbtSection(sectionChanged);
 }
 
 function prevIbtQuestion() {
@@ -4808,7 +4829,6 @@ function advanceIbtSection() {
     submitIbtExam();
     return;
   }
-  // Find first question of next section
   const nextSecName = ibtState.sections[curSec + 1].name;
   const nextIdx = ibtState.questions.findIndex(q => q.section === nextSecName);
   if (nextIdx >= 0) {
@@ -4817,7 +4837,9 @@ function advanceIbtSection() {
     ibtState.currentQ = nextIdx;
     if (ibtState.audio) { ibtState.audio.pause(); ibtState.audio = null; }
     ibtState.audioPlayed = false;
-    renderIbtSection();
+    if (nextSecName === '阅读') ibtState.currentPdfPage = 11;
+    else if (nextSecName === '书写') ibtState.currentPdfPage = 21;
+    renderIbtSection(true);
     toast(ibtState.sections[curSec + 1].nameKo + ' 시험 시작');
   }
 }
@@ -4856,7 +4878,11 @@ function goIbtSection(secIdx) {
     ibtState.currentQ = firstQ;
     if (secName !== '听力') ibtState.audioPlayed = true;
     else ibtState.audioPlayed = false;
-    renderIbtSection();
+    // Set PDF page to approximate start of section
+    if (secName === '听力') ibtState.currentPdfPage = 2;
+    else if (secName === '阅读') ibtState.currentPdfPage = 11;
+    else ibtState.currentPdfPage = 21;
+    renderIbtSection(true);
   }
 }
 
