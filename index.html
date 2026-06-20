@@ -553,13 +553,15 @@ body {
 }
 .ibt-pdf-view {
   background: #fff; margin: 8px; border-radius: 8px;
-  overflow: auto; -webkit-overflow-scrolling: touch;
-  position: relative; max-height: 60vh;
-  touch-action: pan-x pan-y pinch-zoom;
+  overflow: hidden; position: relative; max-height: 65vh;
+  touch-action: none;
+}
+.ibt-pdf-inner {
+  width: 100%; height: 100%; overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .ibt-pdf-view canvas {
-  width: 100%; height: auto; display: block;
-  transform-origin: 0 0; transition: none;
+  display: block; transform-origin: 0 0;
 }
 .ibt-answer-panel {
   position: fixed; bottom: 72px; left: 0; right: 0;
@@ -4469,7 +4471,7 @@ async function startIbtExam(examId) {
       { name: '第三部分', desc: '4지선다', from: 66, to: 85, type: 'abcd', answers: ans.reading.part3 }
     ], time: 40 * 60, hasAudio: false },
     { name: '书写', nameKo: '쓰기', parts: [
-      { name: '第一部分', desc: '어순배열', from: 86, to: 95, type: 'writing', answers: ans.writing.part1 },
+      { name: '第一部分', desc: '어순배열', from: 86, to: 95, type: 'wordorder', answers: ans.writing.part1 },
       { name: '第二部分', desc: '사진보고 작문', from: 96, to: 100, type: 'writing', answers: ans.writing.part2 }
     ], time: 25 * 60, hasAudio: false }
   ];
@@ -4549,15 +4551,13 @@ async function renderIbtPdfPage() {
   const prevDisabled = p <= 1 ? 'disabled style="opacity:.3;pointer-events:none;"' : '';
   const nextDisabled = p >= maxPage ? 'disabled style="opacity:.3;pointer-events:none;"' : '';
   container.innerHTML = audioHtml + `
-    <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px; background:var(--card); margin:4px 8px; border-radius:8px; gap:4px;">
-      <button onclick="ibtPdfPrev()" class="ibt-pdf-nav-btn" ${prevDisabled}>&#x25C0;</button>
-      <button onclick="ibtPdfZoom(-0.5)" class="ibt-pdf-nav-btn">-</button>
+    <div style="display:flex; align-items:center; justify-content:center; padding:6px 8px; background:var(--card); margin:4px 8px; border-radius:8px; gap:12px;">
+      <button onclick="ibtPdfPrev()" class="ibt-pdf-nav-btn" ${prevDisabled}>&#x25C0; 이전</button>
       <span style="font-size:12px; color:var(--text2); white-space:nowrap;">${p} / ${maxPage}</span>
-      <button onclick="ibtPdfZoom(0.5)" class="ibt-pdf-nav-btn">+</button>
-      <button onclick="ibtPdfNext()" class="ibt-pdf-nav-btn" ${nextDisabled}>&#x25B6;</button>
+      <button onclick="ibtPdfNext()" class="ibt-pdf-nav-btn" ${nextDisabled}>다음 &#x25B6;</button>
     </div>
-    <div id="ibt-pdf-canvas-wrap" class="ibt-pdf-view"></div>`;
-  const wrap = document.getElementById('ibt-pdf-canvas-wrap');
+    <div id="ibt-pdf-canvas-wrap" class="ibt-pdf-view"><div class="ibt-pdf-inner" id="ibt-pdf-inner"></div></div>`;
+  const inner = document.getElementById('ibt-pdf-inner');
 
   // Render current page
   if (p >= 1 && p <= ibtState.pdf.numPages) {
@@ -4570,7 +4570,7 @@ async function renderIbtPdfPage() {
       canvas.getContext('2d').drawImage(ibtState.pdfPages[cacheKey], 0, 0);
     } else {
       const page = await ibtState.pdf.getPage(p);
-      const viewport = page.getViewport({ scale: 2.0 });
+      const viewport = page.getViewport({ scale: 2.5 });
       canvas = document.createElement('canvas');
       canvas.width = viewport.width;
       canvas.height = viewport.height;
@@ -4582,7 +4582,85 @@ async function renderIbtPdfPage() {
       cacheCanvas.getContext('2d').drawImage(canvas, 0, 0);
       ibtState.pdfPages[cacheKey] = cacheCanvas;
     }
-    wrap.appendChild(canvas);
+    // Set initial size to fit width
+    canvas.style.width = '100%';
+    inner.appendChild(canvas);
+
+    // Setup pinch-to-zoom
+    setupPdfPinchZoom(document.getElementById('ibt-pdf-canvas-wrap'), canvas);
+  }
+}
+
+function setupPdfPinchZoom(container, canvas) {
+  let scale = 1, lastScale = 1, startDist = 0;
+  let panX = 0, panY = 0, startPanX = 0, startPanY = 0;
+  let isPinching = false, isPanning = false;
+  let startTouches = null;
+
+  function getDistance(t1, t2) {
+    return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+  }
+
+  container.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      isPinching = true;
+      startDist = getDistance(e.touches[0], e.touches[1]);
+      lastScale = scale;
+      e.preventDefault();
+    } else if (e.touches.length === 1 && scale > 1) {
+      isPanning = true;
+      startPanX = e.touches[0].clientX - panX;
+      startPanY = e.touches[0].clientY - panY;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  container.addEventListener('touchmove', e => {
+    if (isPinching && e.touches.length === 2) {
+      const dist = getDistance(e.touches[0], e.touches[1]);
+      scale = Math.max(1, Math.min(4, lastScale * (dist / startDist)));
+      applyTransform();
+      e.preventDefault();
+    } else if (isPanning && e.touches.length === 1 && scale > 1) {
+      panX = e.touches[0].clientX - startPanX;
+      panY = e.touches[0].clientY - startPanY;
+      clampPan();
+      applyTransform();
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  container.addEventListener('touchend', e => {
+    if (e.touches.length < 2) isPinching = false;
+    if (e.touches.length < 1) isPanning = false;
+    if (scale <= 1.05) { scale = 1; panX = 0; panY = 0; applyTransform(); }
+  });
+
+  // Double-tap to zoom
+  let lastTap = 0;
+  container.addEventListener('touchend', e => {
+    if (e.touches.length > 0) return;
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      if (scale > 1.1) { scale = 1; panX = 0; panY = 0; }
+      else { scale = 2.5; panX = 0; panY = 0; }
+      applyTransform();
+      e.preventDefault();
+    }
+    lastTap = now;
+  });
+
+  function clampPan() {
+    const maxX = canvas.offsetWidth * (scale - 1);
+    const maxY = canvas.offsetHeight * (scale - 1);
+    panX = Math.max(-maxX, Math.min(0, panX));
+    panY = Math.max(-maxY, Math.min(0, panY));
+  }
+
+  function applyTransform() {
+    canvas.style.transformOrigin = '0 0';
+    canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+    canvas.style.width = '100%';
   }
 }
 
@@ -4600,15 +4678,6 @@ function ibtPdfNext() {
   renderIbtPdfPage();
 }
 
-function ibtPdfZoom(delta) {
-  if (!ibtState) return;
-  const zoom = (ibtState.pdfZoom || 1) + delta;
-  ibtState.pdfZoom = Math.max(1, Math.min(3, zoom));
-  const canvas = document.querySelector('#ibt-pdf-canvas-wrap canvas');
-  if (canvas) {
-    canvas.style.width = (ibtState.pdfZoom * 100) + '%';
-  }
-}
 
 function startIbtTimer() {
   if (ibtTimer) clearInterval(ibtTimer);
@@ -4746,6 +4815,29 @@ function renderIbtAnswerPanel() {
         }).join('')}
         <button class="ibt-abcd-btn" onclick="clearIbtOrder(${idx})" style="width:32px;height:32px;font-size:16px;background:rgba(239,68,68,0.13);border-color:#ef4444;">&#x21BA;</button>
       </div>`;
+  } else if (q.type === 'wordorder') {
+    // 어순배열: PDF에 나온 단어들을 드래그해서 배열 (실제 IBT와 동일)
+    // answer는 완성된 문장 문자열 - 단어를 쪼개서 보기로 제공
+    const answer = q.answer;
+    if (!ibtState._orderWords) ibtState._orderWords = {};
+    if (!ibtState._orderWords[idx]) {
+      // 참고 답안에서 단어를 쪼개 랜덤 배열
+      const words = splitChineseSentence(answer);
+      const shuffled = [...words].sort(() => Math.random() - 0.5);
+      ibtState._orderWords[idx] = { words, pool: shuffled, selected: [] };
+    }
+    const od = ibtState._orderWords[idx];
+    answerHtml = `
+      <div style="margin-bottom:4px;">
+        <div style="font-size:12px; color:var(--text2); margin-bottom:4px;">${q.num}. 단어를 올바른 순서로 배열하세요</div>
+        <div style="min-height:36px; background:var(--bg); border:2px solid #333; border-radius:8px; padding:6px; margin-bottom:6px; display:flex; flex-wrap:wrap; gap:4px;">
+          ${od.selected.length === 0 ? '<span style="color:#555;font-size:12px;padding:4px;">여기에 순서대로 배치</span>' : ''}
+          ${od.selected.map((w, i) => `<span onclick="ibtOrderRemove(${idx},${i})" style="background:var(--accent);color:#fff;padding:4px 8px;border-radius:6px;font-size:15px;cursor:pointer;">${w}</span>`).join('')}
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+          ${od.pool.map((w, i) => `<span onclick="ibtOrderAdd(${idx},${i})" style="background:var(--card2);color:var(--text);padding:4px 8px;border-radius:6px;font-size:15px;cursor:pointer;border:1px solid #444;">${w}</span>`).join('')}
+        </div>
+      </div>`;
   } else if (q.type === 'writing') {
     const cur = ibtState.userAnswers[idx] || '';
     answerHtml = `
@@ -4794,6 +4886,63 @@ function appendIbtOrder(idx, letter) {
 function clearIbtOrder(idx) {
   if (!ibtState) return;
   ibtState.userAnswers[idx] = '';
+  renderIbtAnswerPanel();
+}
+
+// Split Chinese sentence into word segments for word-order questions
+function splitChineseSentence(sentence) {
+  // Remove trailing punctuation for splitting, add back later
+  const punct = sentence.match(/[。？！，、；：""''（）\.\?\!]$/);
+  let s = punct ? sentence.slice(0, -1) : sentence;
+  // Try to split into meaningful chunks (2-4 chars each)
+  // Use a simple approach: split by known patterns
+  const segments = [];
+  let i = 0;
+  while (i < s.length) {
+    // Try 4, 3, 2, then 1 char segments
+    let found = false;
+    for (let len = Math.min(4, s.length - i); len >= 2; len--) {
+      const chunk = s.slice(i, i + len);
+      // Accept if it's at word boundary (even-ish split)
+      if (i + len <= s.length) {
+        segments.push(chunk);
+        i += len;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      segments.push(s[i]);
+      i++;
+    }
+  }
+  if (punct) segments.push(punct[0]);
+  // If too many small segments, merge some
+  if (segments.length > 8) {
+    const merged = [];
+    for (let j = 0; j < segments.length; j += 2) {
+      merged.push(segments.slice(j, j + 2).join(''));
+    }
+    return merged;
+  }
+  return segments;
+}
+
+function ibtOrderAdd(qIdx, poolIdx) {
+  if (!ibtState || !ibtState._orderWords[qIdx]) return;
+  const od = ibtState._orderWords[qIdx];
+  od.selected.push(od.pool[poolIdx]);
+  od.pool.splice(poolIdx, 1);
+  ibtState.userAnswers[qIdx] = od.selected.join('');
+  renderIbtAnswerPanel();
+}
+
+function ibtOrderRemove(qIdx, selIdx) {
+  if (!ibtState || !ibtState._orderWords[qIdx]) return;
+  const od = ibtState._orderWords[qIdx];
+  od.pool.push(od.selected[selIdx]);
+  od.selected.splice(selIdx, 1);
+  ibtState.userAnswers[qIdx] = od.selected.join('');
   renderIbtAnswerPanel();
 }
 
