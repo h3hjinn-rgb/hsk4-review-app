@@ -46,9 +46,9 @@ body {
 }
 .nav-item {
   display: flex; flex-direction: column; align-items: center;
-  padding: 4px 12px; cursor: pointer; color: var(--text2);
-  font-size: 11px; border: none; background: none;
-  transition: color .2s;
+  padding: 4px 6px; cursor: pointer; color: var(--text2);
+  font-size: 10px; border: none; background: none;
+  transition: color .2s; flex: 1; min-width: 0;
 }
 .nav-item.active { color: var(--accent); }
 .nav-item svg { width: 24px; height: 24px; margin-bottom: 2px; }
@@ -484,6 +484,141 @@ body {
   height: 100%; background: var(--success); border-radius: 4px;
   transition: width .5s;
 }
+/* ============ D-7 Sparta ============ */
+.sparta-header {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  border-radius: var(--radius); padding: 20px 16px; margin-bottom: 16px;
+  text-align: center;
+}
+.sparta-header .sparta-day { font-size: 36px; font-weight: 900; letter-spacing: 2px; }
+.sparta-header .sparta-remaining { font-size: 14px; color: #fca5a5; margin-top: 4px; }
+.sparta-stats-row {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.sparta-stat {
+  flex: 1; background: var(--card); border-radius: 12px;
+  padding: 12px; text-align: center;
+}
+.sparta-stat .val { font-size: 22px; font-weight: 700; }
+.sparta-stat .lbl { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.sparta-card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 24px 16px; text-align: center; min-height: 200px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.sparta-meaning { font-size: 18px; color: var(--text2); margin-bottom: 8px; }
+.sparta-pos { font-size: 12px; color: var(--text2); margin-bottom: 16px; }
+.sparta-choices {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;
+}
+.sparta-choice {
+  padding: 14px 8px; background: var(--card2); border: 2px solid #333;
+  border-radius: 12px; font-size: 22px; font-weight: 600; color: var(--text);
+  text-align: center; cursor: pointer; transition: all .15s;
+}
+.sparta-choice:active { transform: scale(0.96); }
+.sparta-choice.correct { border-color: var(--success); background: #22c55e22; }
+.sparta-choice.wrong { border-color: var(--danger); background: #ef444422; }
+.sparta-choice .sc-pinyin { font-size: 11px; color: var(--warning); font-weight: 400; margin-top: 4px; display: none; }
+.sparta-choice.reveal .sc-pinyin { display: block; }
+.sparta-skip-btn {
+  background: none; border: 1px solid #555; color: var(--text2);
+  padding: 8px 20px; border-radius: 10px; font-size: 13px; cursor: pointer;
+  margin-top: 8px;
+}
+.sparta-result {
+  text-align: center; padding: 32px 16px;
+}
+
+/* ============ IBT Mock Exam ============ */
+.ibt-container { padding: 0; }
+.ibt-top-bar {
+  position: sticky; top: 0; z-index: 50;
+  background: #1a1a2e; border-bottom: 1px solid #333;
+  padding: 8px 12px; display: flex; align-items: center; gap: 8px;
+}
+.ibt-timer {
+  background: var(--card2); padding: 4px 10px; border-radius: 8px;
+  font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+  min-width: 60px; text-align: center;
+}
+.ibt-timer.warning { color: var(--warning); }
+.ibt-timer.danger { color: var(--danger); animation: pulse-timer 1s infinite; }
+@keyframes pulse-timer { 0%,100%{opacity:1} 50%{opacity:.5} }
+.ibt-section-label {
+  font-size: 13px; font-weight: 600; color: var(--text);
+}
+.ibt-q-num {
+  margin-left: auto; font-size: 12px; color: var(--text2);
+}
+.ibt-pdf-view {
+  background: #fff; margin: 8px; border-radius: 8px; overflow: hidden;
+  position: relative;
+}
+.ibt-pdf-view canvas {
+  width: 100% !important; height: auto !important; display: block;
+}
+.ibt-answer-panel {
+  position: fixed; bottom: 72px; left: 0; right: 0;
+  background: var(--card); border-top: 1px solid #333;
+  padding: 10px 12px; max-width: 480px; margin: 0 auto;
+  z-index: 50;
+}
+.ibt-answer-row {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+}
+.ibt-answer-row .q-label {
+  font-size: 12px; color: var(--text2); min-width: 28px;
+}
+.ibt-ox-btn {
+  padding: 6px 16px; border-radius: 8px; border: 2px solid #444;
+  background: var(--card2); color: var(--text); font-size: 14px;
+  font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.ibt-ox-btn.selected { border-color: var(--accent); background: rgba(233,69,96,0.2); }
+.ibt-abcd-btn {
+  width: 36px; height: 36px; border-radius: 50%; border: 2px solid #444;
+  background: var(--card2); color: var(--text); font-size: 13px;
+  font-weight: 600; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; transition: all .15s;
+}
+.ibt-abcd-btn.selected { border-color: var(--accent); background: var(--accent); color: #fff; }
+.ibt-nav-row {
+  display: flex; gap: 8px; margin-top: 8px;
+}
+.ibt-nav-row .btn { flex: 1; padding: 10px; font-size: 14px; }
+.ibt-q-grid {
+  display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0;
+}
+.ibt-q-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; cursor: pointer; border: 1px solid #444;
+  background: var(--card2); color: var(--text2); transition: all .15s;
+}
+.ibt-q-dot.answered { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+.ibt-q-dot.current { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.ibt-exam-select {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.ibt-exam-card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 16px; cursor: pointer; transition: transform .15s;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ibt-exam-card:active { transform: scale(0.98); }
+.ibt-score-badge {
+  font-size: 13px; padding: 4px 10px; border-radius: 8px;
+  font-weight: 600;
+}
+.ibt-writing-input {
+  width: 100%; padding: 12px; font-size: 16px;
+  background: var(--card2); border: 2px solid #333;
+  border-radius: 12px; color: var(--text);
+  outline: none; resize: none; min-height: 44px;
+  lang: zh-CN;
+}
+.ibt-writing-input:focus { border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -884,6 +1019,61 @@ body {
     <div class="progress-bar" style="margin-bottom:16px;"><div class="progress-fill" id="vs-progress"></div></div>
     <div id="vs-content"></div>
   </div>
+
+  <!-- D-7 Sparta Page -->
+  <div id="page-sparta" class="page">
+    <div id="sparta-main">
+      <div class="sparta-header">
+        <div class="sparta-day" id="sparta-day-label">D-7</div>
+        <div class="sparta-remaining" id="sparta-remaining-label">남은 단어: 1201개</div>
+      </div>
+      <div class="sparta-stats-row">
+        <div class="sparta-stat"><div class="val c-green" id="sp-mastered">0</div><div class="lbl">마스터</div></div>
+        <div class="sparta-stat"><div class="val c-yellow" id="sp-unsure">0</div><div class="lbl">애매함</div></div>
+        <div class="sparta-stat"><div class="val c-red" id="sp-unknown">0</div><div class="lbl">모름</div></div>
+      </div>
+      <div style="height:8px; background:#333; border-radius:4px; overflow:hidden; margin-bottom:4px;">
+        <div id="sp-progress-fill" style="height:100%; background: linear-gradient(90deg, var(--success), var(--warning)); width:0%; transition: width .5s;"></div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text2); margin-bottom:16px;">
+        <span id="sp-progress-text">0 / 1201</span>
+        <span id="sp-today-done">오늘 완료: 0개</span>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="startSpartaSession()" id="sp-start-btn" style="font-size:16px; padding:14px;">오늘의 스파르타 시작</button>
+      <div style="margin-top:16px;">
+        <button class="btn btn-outline btn-block" onclick="resetSpartaData()" style="font-size:12px; padding:8px;">진행 초기화</button>
+      </div>
+    </div>
+    <div id="sparta-session" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <button class="back-btn" onclick="endSpartaSession()" style="margin:0;">&lt; 그만하기</button>
+        <span id="sp-session-counter" style="font-size:13px; color:var(--text2);">1/100</span>
+      </div>
+      <div class="progress-bar" style="margin-bottom:12px;"><div class="progress-fill" id="sp-session-progress"></div></div>
+      <div id="sp-session-content"></div>
+    </div>
+  </div>
+
+  <!-- IBT Mock Exam Page -->
+  <div id="page-ibt" class="page">
+    <div id="ibt-main">
+      <button class="back-btn" onclick="showPage('home')">&lt; 뒤로</button>
+      <div class="page-header">
+        모의고사 (IBT)
+        <small>실전 시험 환경 시뮬레이션</small>
+      </div>
+      <div class="ibt-exam-select" id="ibt-exam-list"></div>
+    </div>
+    <div id="ibt-exam" style="display:none;">
+      <div class="ibt-top-bar" id="ibt-top-bar">
+        <div class="ibt-timer" id="ibt-timer">00:00</div>
+        <div class="ibt-section-label" id="ibt-section-label">听力 第一部分</div>
+        <div class="ibt-q-num" id="ibt-q-num">1/45</div>
+      </div>
+      <div id="ibt-body" style="padding-bottom:200px;"></div>
+      <div class="ibt-answer-panel" id="ibt-answer-panel"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Bottom Nav -->
@@ -891,6 +1081,14 @@ body {
   <button class="nav-item active" onclick="showPage('home')" data-page="home">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
     홈
+  </button>
+  <button class="nav-item" onclick="showPage('sparta')" data-page="sparta">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    스파르타
+  </button>
+  <button class="nav-item" onclick="showPage('ibt')" data-page="ibt">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    모의고사
   </button>
   <button class="nav-item" onclick="showPage('audio')" data-page="audio">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -1140,7 +1338,7 @@ function showPage(pageId) {
   if (!el) { document.getElementById('page-home').classList.add('active'); pageId = 'home'; }
   else el.classList.add('active');
   // Map sub-pages to parent nav items
-  const navMap = { vocabsession: 'home', quiz: 'test', flashcard: 'notes', wordquiz: 'notes', daily: 'home', typing: 'home', wrong: 'home', mocktest: 'home', 'pos-study': 'home' };
+  const navMap = { vocabsession: 'home', quiz: 'test', flashcard: 'notes', wordquiz: 'notes', daily: 'home', typing: 'home', wrong: 'home', mocktest: 'home', 'pos-study': 'home', 'ibt-exam': 'ibt' };
   const navPage = navMap[pageId] || pageId;
   document.querySelectorAll('.nav-item').forEach(n => {
     n.classList.toggle('active', n.dataset.page === navPage);
@@ -1149,6 +1347,8 @@ function showPage(pageId) {
   if (pageId === 'wrong') renderWrongList();
   if (pageId === 'vocab') updateVocabPage();
   if (pageId === 'pos-study') renderPosStudyPage();
+  if (pageId === 'sparta') updateSpartaUI();
+  if (pageId === 'ibt') renderIbtExamList();
 }
 
 function toast(msg) {
@@ -3998,6 +4198,818 @@ function updateTodayProgress() {
   if (fill) fill.style.width = Math.round((doneCount / totalTasks) * 100) + '%';
 }
 
+// =================== D-7 SPARTA ===================
+function getSpartaData() {
+  let d = JSON.parse(localStorage.getItem('hsk4_sparta') || 'null');
+  if (!d) {
+    d = { startDate: new Date().toISOString().slice(0,10), words: {}, todayDone: {} };
+    localStorage.setItem('hsk4_sparta', JSON.stringify(d));
+  }
+  return d;
+}
+function saveSpartaData(d) { localStorage.setItem('hsk4_sparta', JSON.stringify(d)); }
+
+function getSpartaDDay() {
+  const d = getSpartaData();
+  const examDate = localStorage.getItem('hsk4_exam_date');
+  if (examDate) {
+    const diff = Math.ceil((new Date(examDate) - new Date()) / 86400000);
+    return Math.max(0, diff);
+  }
+  return 7;
+}
+
+function getSpartaTodayKey() { return new Date().toISOString().slice(0,10); }
+
+function getSpartaRemaining() {
+  if (hskWords.length === 0) return [];
+  const d = getSpartaData();
+  return hskWords.filter(w => {
+    const st = d.words[w.chinese];
+    return !st || st.status !== 'mastered';
+  });
+}
+
+function updateSpartaUI() {
+  const d = getSpartaData();
+  const remaining = getSpartaRemaining();
+  const mastered = hskWords.length > 0 ? hskWords.filter(w => d.words[w.chinese] && d.words[w.chinese].status === 'mastered').length : 0;
+  const unsure = hskWords.length > 0 ? hskWords.filter(w => d.words[w.chinese] && d.words[w.chinese].status === 'unsure').length : 0;
+  const unknown = hskWords.length > 0 ? hskWords.filter(w => d.words[w.chinese] && d.words[w.chinese].status === 'unknown').length : 0;
+  const dday = getSpartaDDay();
+  const todayKey = getSpartaTodayKey();
+  const todayDone = d.todayDone[todayKey] || 0;
+
+  document.getElementById('sparta-day-label').textContent = 'D-' + dday;
+  document.getElementById('sparta-remaining-label').textContent = '남은 단어: ' + remaining.length + '개';
+  document.getElementById('sp-mastered').textContent = mastered;
+  document.getElementById('sp-unsure').textContent = unsure;
+  document.getElementById('sp-unknown').textContent = unknown;
+  const total = hskWords.length || 1;
+  document.getElementById('sp-progress-fill').style.width = (mastered / total * 100) + '%';
+  document.getElementById('sp-progress-text').textContent = mastered + ' / ' + total + ' 마스터';
+  document.getElementById('sp-today-done').textContent = '오늘 완료: ' + todayDone + '개';
+
+  const btn = document.getElementById('sp-start-btn');
+  if (remaining.length === 0) {
+    btn.textContent = '모든 단어 마스터 완료!';
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+  } else {
+    btn.textContent = '오늘의 스파르타 시작 (' + remaining.length + '개)';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
+}
+
+let spartaSession = null;
+
+function startSpartaSession() {
+  const remaining = getSpartaRemaining();
+  if (remaining.length === 0) { toast('모든 단어를 마스터했습니다!'); return; }
+  // Shuffle
+  const words = [...remaining].sort(() => Math.random() - 0.5);
+  spartaSession = { words, current: 0, todayMastered: 0, todayReviewed: 0 };
+  document.getElementById('sparta-main').style.display = 'none';
+  document.getElementById('sparta-session').style.display = 'block';
+  renderSpartaCard();
+}
+
+function endSpartaSession() {
+  document.getElementById('sparta-main').style.display = 'block';
+  document.getElementById('sparta-session').style.display = 'none';
+  spartaSession = null;
+  updateSpartaUI();
+}
+
+function renderSpartaCard() {
+  if (!spartaSession || spartaSession.current >= spartaSession.words.length) {
+    showSpartaResult();
+    return;
+  }
+  const w = spartaSession.words[spartaSession.current];
+  const total = spartaSession.words.length;
+  const cur = spartaSession.current;
+  document.getElementById('sp-session-counter').textContent = (cur + 1) + '/' + total;
+  document.getElementById('sp-session-progress').style.width = (cur / total * 100) + '%';
+
+  // Generate 4 choices (1 correct + 3 distractors)
+  const correct = w;
+  const others = hskWords.filter(x => x.chinese !== correct.chinese);
+  others.sort(() => Math.random() - 0.5);
+  const distractors = others.slice(0, 3);
+  const choices = [correct, ...distractors].sort(() => Math.random() - 0.5);
+
+  const content = document.getElementById('sp-session-content');
+  content.innerHTML = `
+    <div class="sparta-card">
+      <div class="sparta-meaning">${esc(w.meaning)}</div>
+      <div class="sparta-pos">${esc(w.pos)} · Level ${w.level}</div>
+      <div class="sparta-choices">
+        ${choices.map((c, i) => `
+          <div class="sparta-choice" data-chinese="${esc(c.chinese)}" data-correct="${c.chinese === correct.chinese}" onclick="answerSparta(this, ${c.chinese === correct.chinese})">
+            ${esc(c.chinese)}
+            <div class="sc-pinyin">${esc(c.pinyin)}</div>
+          </div>`).join('')}
+      </div>
+      <button class="sparta-skip-btn" onclick="spartaAlreadyKnow()">이미 알아 (바로 마스터)</button>
+    </div>`;
+  spartaSession._startTime = Date.now();
+
+  function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+}
+
+function answerSparta(el, isCorrect) {
+  if (spartaSession._answered) return;
+  spartaSession._answered = true;
+  const elapsed = Date.now() - spartaSession._startTime;
+  const w = spartaSession.words[spartaSession.current];
+  const d = getSpartaData();
+  const todayKey = getSpartaTodayKey();
+
+  // Highlight choices
+  document.querySelectorAll('.sparta-choice').forEach(c => {
+    c.classList.add('reveal');
+    if (c.dataset.correct === 'true') c.classList.add('correct');
+    else if (c === el && !isCorrect) c.classList.add('wrong');
+    c.style.pointerEvents = 'none';
+  });
+
+  if (isCorrect && elapsed < 2000) {
+    // Fast correct = mastered
+    d.words[w.chinese] = { status: 'mastered', day: getSpartaDDay() };
+    spartaSession.todayMastered++;
+  } else if (isCorrect) {
+    // Slow correct = unsure
+    d.words[w.chinese] = { status: 'unsure', day: getSpartaDDay() };
+  } else {
+    // Wrong = unknown
+    d.words[w.chinese] = { status: 'unknown', day: getSpartaDDay() };
+  }
+  spartaSession.todayReviewed++;
+  d.todayDone[todayKey] = (d.todayDone[todayKey] || 0) + 1;
+  saveSpartaData(d);
+
+  // Show feedback briefly then next
+  const fb = isCorrect && elapsed < 2000 ? 'MASTER!' : isCorrect ? '맞았지만 느려요' : '틀렸어요';
+  const fbColor = isCorrect && elapsed < 2000 ? 'var(--success)' : isCorrect ? 'var(--warning)' : 'var(--danger)';
+  const fbEl = document.createElement('div');
+  fbEl.style.cssText = `text-align:center; font-size:16px; font-weight:700; color:${fbColor}; margin-top:12px;`;
+  fbEl.textContent = fb + (isCorrect ? ' (' + (elapsed/1000).toFixed(1) + 's)' : '');
+  document.getElementById('sp-session-content').appendChild(fbEl);
+
+  setTimeout(() => {
+    spartaSession._answered = false;
+    spartaSession.current++;
+    renderSpartaCard();
+  }, isCorrect && elapsed < 2000 ? 600 : 1200);
+}
+
+function spartaAlreadyKnow() {
+  if (spartaSession._answered) return;
+  spartaSession._answered = true;
+  const w = spartaSession.words[spartaSession.current];
+  const d = getSpartaData();
+  const todayKey = getSpartaTodayKey();
+  d.words[w.chinese] = { status: 'mastered', day: getSpartaDDay() };
+  spartaSession.todayMastered++;
+  spartaSession.todayReviewed++;
+  d.todayDone[todayKey] = (d.todayDone[todayKey] || 0) + 1;
+  saveSpartaData(d);
+
+  toast('마스터!');
+  setTimeout(() => {
+    spartaSession._answered = false;
+    spartaSession.current++;
+    renderSpartaCard();
+  }, 400);
+}
+
+function showSpartaResult() {
+  const s = spartaSession;
+  document.getElementById('sp-session-content').innerHTML = `
+    <div class="sparta-result">
+      <div style="font-size:48px; margin-bottom:12px;">&#x1F525;</div>
+      <div style="font-size:24px; font-weight:700; margin-bottom:8px;">세션 완료!</div>
+      <div style="font-size:15px; color:var(--text2); margin-bottom:20px;">
+        ${s.todayReviewed}개 복습 · ${s.todayMastered}개 마스터
+      </div>
+      <div style="font-size:14px; color:var(--text2); margin-bottom:24px;">
+        남은 단어: ${getSpartaRemaining().length}개
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-primary" onclick="startSpartaSession()" style="flex:1;">계속하기</button>
+        <button class="btn btn-outline" onclick="endSpartaSession()" style="flex:1;">돌아가기</button>
+      </div>
+    </div>`;
+}
+
+function resetSpartaData() {
+  if (!confirm('스파르타 진행 데이터를 초기화할까요?')) return;
+  localStorage.removeItem('hsk4_sparta');
+  updateSpartaUI();
+  toast('초기화 완료');
+}
+
+// =================== IBT MOCK EXAM ===================
+let ibtState = null;
+let ibtAnswers = null;
+let ibtTimer = null;
+
+async function loadIbtAnswers() {
+  if (ibtAnswers) return ibtAnswers;
+  try {
+    const res = await fetch('data/mock/answers.json');
+    ibtAnswers = await res.json();
+    return ibtAnswers;
+  } catch(e) { console.error('Failed to load IBT answers:', e); return null; }
+}
+
+function renderIbtExamList() {
+  loadIbtAnswers();
+  const exams = ['H41001','H41002','H41003','H41004','H41005'];
+  const list = document.getElementById('ibt-exam-list');
+  list.innerHTML = exams.map((id, i) => {
+    const saved = JSON.parse(localStorage.getItem('ibt_score_' + id) || 'null');
+    const isPass = saved && saved.hskTotal >= 120;
+    const scoreHtml = saved ? `<div style="text-align:right;"><div class="ibt-score-badge" style="background:${isPass ? '#22c55e33;color:var(--success)' : '#ef444433;color:var(--danger)'};">${isPass ? '합격' : '불합격'} ${saved.hskTotal || 0}/200</div><div style="font-size:10px;color:var(--text2);margin-top:2px;">듣기${saved.hskListening||0} 독해${saved.hskReading||0}</div></div>` : '<div style="font-size:12px;color:var(--text2);">미응시</div>';
+    return `
+      <div class="ibt-exam-card" onclick="startIbtExam('${id}')">
+        <div>
+          <div style="font-size:16px; font-weight:600;">모의고사 ${i+1}회</div>
+          <div style="font-size:12px; color:var(--text2);">${id} · 듣기+독해+쓰기</div>
+        </div>
+        ${scoreHtml}
+      </div>`;
+  }).join('');
+}
+
+async function startIbtExam(examId) {
+  const answers = await loadIbtAnswers();
+  if (!answers || !answers[examId]) { toast('데이터 로딩 중...'); return; }
+
+  // Build question structure matching real HSK4 IBT
+  const ans = answers[examId];
+  const sections = [
+    { name: '听力', nameKo: '듣기', parts: [
+      { name: '第一部分', desc: '판단 O/X', from: 1, to: 10, type: 'ox', answers: ans.listening.part1 },
+      { name: '第二部分', desc: '4지선다', from: 11, to: 25, type: 'abcd', answers: ans.listening.part2 },
+      { name: '第三部分', desc: '4지선다', from: 26, to: 45, type: 'abcd', answers: ans.listening.part3 }
+    ], time: 30 * 60, hasAudio: true },
+    { name: '阅读', nameKo: '독해', parts: [
+      { name: '第一部分', desc: '매칭 A-F', from: 46, to: 55, type: 'abcdef', answers: ans.reading.part1 },
+      { name: '第二部分', desc: '문장배열', from: 56, to: 65, type: 'order3', answers: ans.reading.part2 },
+      { name: '第三部分', desc: '4지선다', from: 66, to: 85, type: 'abcd', answers: ans.reading.part3 }
+    ], time: 40 * 60, hasAudio: false },
+    { name: '书写', nameKo: '쓰기', parts: [
+      { name: '第一部分', desc: '어순배열', from: 86, to: 95, type: 'writing', answers: ans.writing.part1 },
+      { name: '第二部分', desc: '사진보고 작문', from: 96, to: 100, type: 'writing', answers: ans.writing.part2 }
+    ], time: 25 * 60, hasAudio: false }
+  ];
+
+  // Flatten questions
+  const questions = [];
+  sections.forEach(sec => {
+    sec.parts.forEach(part => {
+      for (let i = 0; i < part.answers.length; i++) {
+        questions.push({
+          num: part.from + i,
+          section: sec.name,
+          sectionKo: sec.nameKo,
+          part: part.name,
+          type: part.type,
+          answer: part.answers[i]
+        });
+      }
+    });
+  });
+
+  ibtState = {
+    examId,
+    sections,
+    questions,
+    userAnswers: new Array(questions.length).fill(null),
+    currentQ: 0,
+    currentSection: 0,
+    timeLeft: sections[0].time,
+    pdfLoaded: false,
+    pdfPages: {},
+    audioPlayed: false
+  };
+
+  document.getElementById('ibt-main').style.display = 'none';
+  document.getElementById('ibt-exam').style.display = 'block';
+
+  // Load PDF.js if not loaded
+  if (!window.pdfjsLib) {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = () => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      loadIbtPdf(examId);
+    };
+    document.head.appendChild(script);
+  } else {
+    loadIbtPdf(examId);
+  }
+
+  startIbtTimer();
+  renderIbtSection();
+}
+
+async function loadIbtPdf(examId) {
+  try {
+    const pdf = await pdfjsLib.getDocument('data/mock/' + examId + '.pdf').promise;
+    ibtState.pdf = pdf;
+    ibtState.pdfLoaded = true;
+    renderIbtPdfPage();
+  } catch(e) { console.error('PDF load error:', e); }
+}
+
+async function renderIbtPdfPage() {
+  if (!ibtState || !ibtState.pdfLoaded) return;
+  const q = ibtState.questions[ibtState.currentQ];
+  // Map question number to approximate PDF page
+  // HSK4 PDF structure: page 1 = cover, page 2+ = questions
+  let pdfPage = getIbtPdfPage(q.num, q.section);
+
+  const container = document.getElementById('ibt-body');
+  // Clear previous
+  container.innerHTML = '<div id="ibt-pdf-canvas-wrap" class="ibt-pdf-view"></div>';
+  const wrap = document.getElementById('ibt-pdf-canvas-wrap');
+
+  // Render current and next page
+  for (let p = pdfPage; p <= Math.min(pdfPage + 1, ibtState.pdf.numPages - 2); p++) {
+    if (p < 1 || p > ibtState.pdf.numPages) continue;
+    const cacheKey = 'page_' + p;
+    let canvas;
+    if (ibtState.pdfPages[cacheKey]) {
+      canvas = ibtState.pdfPages[cacheKey].cloneNode(true);
+      const ctx = canvas.getContext('2d');
+      const origCanvas = ibtState.pdfPages[cacheKey];
+      ctx.drawImage(origCanvas, 0, 0);
+    } else {
+      const page = await ibtState.pdf.getPage(p);
+      const viewport = page.getViewport({ scale: 2.0 });
+      canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      // Cache
+      const cacheCanvas = document.createElement('canvas');
+      cacheCanvas.width = canvas.width;
+      cacheCanvas.height = canvas.height;
+      cacheCanvas.getContext('2d').drawImage(canvas, 0, 0);
+      ibtState.pdfPages[cacheKey] = cacheCanvas;
+    }
+    wrap.appendChild(canvas);
+  }
+}
+
+function getIbtPdfPage(qNum, section) {
+  // Approximate page mapping based on HSK4 PDF structure
+  // Page 1: cover/instructions, Page 2+: questions
+  if (section === '听力') {
+    if (qNum <= 10) return 2; // Part 1
+    if (qNum <= 15) return 3; // Part 2 start
+    if (qNum <= 20) return 4;
+    if (qNum <= 25) return 5;
+    if (qNum <= 30) return 6; // Part 3 start
+    if (qNum <= 33) return 7;
+    if (qNum <= 37) return 8;
+    if (qNum <= 41) return 9;
+    return 10;
+  } else if (section === '阅读') {
+    if (qNum <= 50) return 11;
+    if (qNum <= 55) return 12;
+    if (qNum <= 58) return 13;
+    if (qNum <= 60) return 14;
+    if (qNum <= 62) return 15;
+    if (qNum <= 65) return 16;
+    if (qNum <= 70) return 17;
+    if (qNum <= 75) return 18;
+    if (qNum <= 80) return 19;
+    return 20;
+  } else {
+    if (qNum <= 90) return 21;
+    if (qNum <= 95) return 22;
+    return 22; // writing part 2 - pictures
+  }
+}
+
+function startIbtTimer() {
+  if (ibtTimer) clearInterval(ibtTimer);
+  ibtTimer = setInterval(() => {
+    if (!ibtState) { clearInterval(ibtTimer); return; }
+    ibtState.timeLeft--;
+    const mins = Math.floor(ibtState.timeLeft / 60);
+    const secs = ibtState.timeLeft % 60;
+    const timerEl = document.getElementById('ibt-timer');
+    timerEl.textContent = String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
+    timerEl.className = 'ibt-timer' + (ibtState.timeLeft <= 60 ? ' danger' : ibtState.timeLeft <= 300 ? ' warning' : '');
+    if (ibtState.timeLeft <= 0) {
+      // Auto advance to next section or end
+      advanceIbtSection();
+    }
+  }, 1000);
+}
+
+function renderIbtSection() {
+  if (!ibtState) return;
+  const q = ibtState.questions[ibtState.currentQ];
+  document.getElementById('ibt-section-label').textContent = q.section + ' ' + q.part;
+  document.getElementById('ibt-q-num').textContent = q.num + '/100';
+
+  // Render answer panel
+  renderIbtAnswerPanel();
+  renderIbtPdfPage();
+
+  // Audio for listening section
+  if (q.section === '听力' && !ibtState.audioPlayed) {
+    const body = document.getElementById('ibt-body');
+    body.innerHTML = `
+      <div style="text-align:center; padding:40px 20px;">
+        <div style="font-size:48px; margin-bottom:16px;">&#x1F3A7;</div>
+        <div style="font-size:18px; font-weight:600; margin-bottom:8px;">듣기 시험</div>
+        <div style="font-size:14px; color:var(--text2); margin-bottom:20px;">음성을 재생하면 PDF 문제지가 함께 표시됩니다</div>
+        <button class="btn btn-primary" onclick="playIbtAudio()" style="font-size:16px; padding:14px 32px;">
+          &#x25B6; 듣기 시작
+        </button>
+        <div style="font-size:12px; color:var(--text2); margin-top:12px;">실제 시험처럼 음성은 한 번만 재생됩니다</div>
+      </div>` + body.innerHTML;
+  }
+}
+
+function playIbtAudio() {
+  if (!ibtState) return;
+  ibtState.audioPlayed = true;
+  const audio = new Audio('data/mock/' + ibtState.examId + '.mp3');
+  ibtState.audio = audio;
+  audio.play();
+
+  // Replace audio start UI with player
+  const body = document.getElementById('ibt-body');
+  const firstChild = body.firstElementChild;
+  if (firstChild) {
+    firstChild.innerHTML = `
+      <div style="text-align:center; padding:12px;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:12px;">
+          <button onclick="ibtState.audio.paused ? ibtState.audio.play() : ibtState.audio.pause()" style="width:40px; height:40px; border-radius:50%; border:none; background:var(--accent); color:#fff; font-size:16px; cursor:pointer;" id="ibt-audio-btn">&#x23F8;</button>
+          <div style="flex:1; max-width:200px;">
+            <input type="range" id="ibt-audio-seek" min="0" max="100" value="0" style="width:100%; accent-color:var(--accent);">
+          </div>
+          <span id="ibt-audio-time" style="font-size:12px; color:var(--text2); min-width:40px;">0:00</span>
+        </div>
+      </div>`;
+  }
+
+  audio.addEventListener('timeupdate', () => {
+    const seek = document.getElementById('ibt-audio-seek');
+    const time = document.getElementById('ibt-audio-time');
+    if (seek && audio.duration) {
+      seek.value = (audio.currentTime / audio.duration * 100).toFixed(1);
+      const m = Math.floor(audio.currentTime / 60);
+      const s = Math.floor(audio.currentTime % 60);
+      if (time) time.textContent = m + ':' + String(s).padStart(2,'0');
+    }
+  });
+  audio.addEventListener('play', () => { const b = document.getElementById('ibt-audio-btn'); if(b) b.innerHTML = '&#x23F8;'; });
+  audio.addEventListener('pause', () => { const b = document.getElementById('ibt-audio-btn'); if(b) b.innerHTML = '&#x25B6;'; });
+  const seek = document.getElementById('ibt-audio-seek');
+  if (seek) seek.addEventListener('input', () => { if(audio.duration) audio.currentTime = seek.value / 100 * audio.duration; });
+
+  renderIbtPdfPage();
+}
+
+function renderIbtAnswerPanel() {
+  if (!ibtState) return;
+  const panel = document.getElementById('ibt-answer-panel');
+  const q = ibtState.questions[ibtState.currentQ];
+  const idx = ibtState.currentQ;
+
+  // Find current section's question range
+  const secQuestions = ibtState.questions.filter(x => x.section === q.section && x.part === q.part);
+  const secStart = ibtState.questions.indexOf(secQuestions[0]);
+  const secEnd = secStart + secQuestions.length;
+
+  // Answer buttons for current question
+  let answerHtml = '';
+  if (q.type === 'ox') {
+    const cur = ibtState.userAnswers[idx];
+    answerHtml = `
+      <div class="ibt-answer-row" style="justify-content:center; gap:12px;">
+        <span style="font-size:13px; color:var(--text2); min-width:36px;">${q.num}.</span>
+        <button class="ibt-ox-btn ${cur === 'O' ? 'selected' : ''}" onclick="setIbtAnswer(${idx}, 'O')">&#x2714; 맞다</button>
+        <button class="ibt-ox-btn ${cur === 'X' ? 'selected' : ''}" onclick="setIbtAnswer(${idx}, 'X')">&#x2718; 틀리다</button>
+      </div>`;
+  } else if (q.type === 'abcd') {
+    const cur = ibtState.userAnswers[idx];
+    answerHtml = `
+      <div class="ibt-answer-row" style="justify-content:center; gap:8px;">
+        <span style="font-size:13px; color:var(--text2); min-width:36px;">${q.num}.</span>
+        ${['A','B','C','D'].map(l => `<button class="ibt-abcd-btn ${cur === l ? 'selected' : ''}" onclick="setIbtAnswer(${idx}, '${l}')">${l}</button>`).join('')}
+      </div>`;
+  } else if (q.type === 'abcdef') {
+    const cur = ibtState.userAnswers[idx];
+    answerHtml = `
+      <div class="ibt-answer-row" style="justify-content:center; gap:6px;">
+        <span style="font-size:13px; color:var(--text2); min-width:36px;">${q.num}.</span>
+        ${['A','B','C','D','E','F'].map(l => `<button class="ibt-abcd-btn ${cur === l ? 'selected' : ''}" onclick="setIbtAnswer(${idx}, '${l}')" style="width:32px;height:32px;font-size:12px;">${l}</button>`).join('')}
+      </div>`;
+  } else if (q.type === 'order3') {
+    const cur = ibtState.userAnswers[idx] || '';
+    answerHtml = `
+      <div class="ibt-answer-row" style="justify-content:center; gap:6px; flex-wrap:wrap;">
+        <span style="font-size:13px; color:var(--text2); min-width:36px;">${q.num}.</span>
+        <span style="font-size:14px; color:var(--accent); min-width:50px;">${cur || '___'}</span>
+        ${['A','B','C'].map(l => `<button class="ibt-abcd-btn" onclick="appendIbtOrder(${idx}, '${l}')" style="width:32px;height:32px;">${l}</button>`).join('')}
+        <button class="ibt-abcd-btn" onclick="clearIbtOrder(${idx})" style="width:32px;height:32px;font-size:10px;background:var(--danger)22;border-color:#ef4444;">C</button>
+      </div>`;
+  } else if (q.type === 'writing') {
+    const cur = ibtState.userAnswers[idx] || '';
+    answerHtml = `
+      <div style="margin-bottom:4px;">
+        <span style="font-size:13px; color:var(--text2);">${q.num}.</span>
+        <input class="ibt-writing-input" value="${(cur||'').replace(/"/g,'&quot;')}" placeholder="중국어로 문장을 작성하세요" lang="zh-CN" inputmode="text"
+          oninput="setIbtAnswer(${idx}, this.value)" style="margin-top:4px;">
+      </div>`;
+  }
+
+  // Question dots for current part
+  const dotsHtml = secQuestions.map((sq, i) => {
+    const gi = secStart + i;
+    const cls = (gi === ibtState.currentQ ? ' current' : '') + (ibtState.userAnswers[gi] ? ' answered' : '');
+    return `<div class="ibt-q-dot${cls}" onclick="goIbtQuestion(${gi})">${sq.num}</div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    ${answerHtml}
+    <div class="ibt-q-grid">${dotsHtml}</div>
+    <div class="ibt-nav-row">
+      <button class="btn btn-outline" onclick="prevIbtQuestion()" ${ibtState.currentQ <= 0 ? 'disabled style="opacity:.3"' : ''}>이전</button>
+      <button class="btn btn-outline" onclick="showIbtSectionNav()" style="font-size:12px;">영역</button>
+      ${ibtState.currentQ >= ibtState.questions.length - 1 ?
+        '<button class="btn btn-primary" onclick="submitIbtExam()">제출</button>' :
+        '<button class="btn btn-primary" onclick="nextIbtQuestion()">다음</button>'}
+    </div>`;
+}
+
+function setIbtAnswer(idx, val) {
+  if (!ibtState) return;
+  ibtState.userAnswers[idx] = val;
+  renderIbtAnswerPanel();
+}
+
+function appendIbtOrder(idx, letter) {
+  if (!ibtState) return;
+  let cur = ibtState.userAnswers[idx] || '';
+  if (cur.length >= 3) return;
+  if (cur.includes(letter)) return;
+  cur += letter;
+  ibtState.userAnswers[idx] = cur;
+  renderIbtAnswerPanel();
+}
+
+function clearIbtOrder(idx) {
+  if (!ibtState) return;
+  ibtState.userAnswers[idx] = '';
+  renderIbtAnswerPanel();
+}
+
+function goIbtQuestion(idx) {
+  if (!ibtState) return;
+  const oldSection = ibtState.questions[ibtState.currentQ].section;
+  ibtState.currentQ = idx;
+  const newSection = ibtState.questions[ibtState.currentQ].section;
+  if (oldSection !== newSection) {
+    // Section changed - update timer
+    const secIdx = ibtState.sections.findIndex(s => s.name === newSection);
+    ibtState.currentSection = secIdx;
+    ibtState.timeLeft = ibtState.sections[secIdx].time;
+  }
+  renderIbtSection();
+}
+
+function prevIbtQuestion() {
+  if (!ibtState || ibtState.currentQ <= 0) return;
+  goIbtQuestion(ibtState.currentQ - 1);
+}
+
+function nextIbtQuestion() {
+  if (!ibtState || ibtState.currentQ >= ibtState.questions.length - 1) return;
+  goIbtQuestion(ibtState.currentQ + 1);
+}
+
+function advanceIbtSection() {
+  if (!ibtState) return;
+  const curSec = ibtState.currentSection;
+  if (curSec >= ibtState.sections.length - 1) {
+    submitIbtExam();
+    return;
+  }
+  // Find first question of next section
+  const nextSecName = ibtState.sections[curSec + 1].name;
+  const nextIdx = ibtState.questions.findIndex(q => q.section === nextSecName);
+  if (nextIdx >= 0) {
+    ibtState.currentSection = curSec + 1;
+    ibtState.timeLeft = ibtState.sections[curSec + 1].time;
+    ibtState.currentQ = nextIdx;
+    if (ibtState.audio) { ibtState.audio.pause(); ibtState.audio = null; }
+    ibtState.audioPlayed = false;
+    renderIbtSection();
+    toast(ibtState.sections[curSec + 1].nameKo + ' 시험 시작');
+  }
+}
+
+function showIbtSectionNav() {
+  if (!ibtState) return;
+  const body = document.getElementById('ibt-body');
+  const secNames = ibtState.sections.map(s => s.name);
+  body.innerHTML = `
+    <div style="padding:20px;">
+      <div style="font-size:18px; font-weight:700; margin-bottom:16px;">영역 이동</div>
+      ${ibtState.sections.map((sec, i) => {
+        const secQs = ibtState.questions.filter(q => q.section === sec.name);
+        const answered = secQs.filter((q, j) => ibtState.userAnswers[ibtState.questions.indexOf(q)]).length;
+        return `
+          <div class="ibt-exam-card" style="margin-bottom:8px;" onclick="goIbtSection(${i})">
+            <div>
+              <div style="font-size:15px; font-weight:600;">${sec.nameKo} (${sec.name})</div>
+              <div style="font-size:12px; color:var(--text2);">${secQs[0].num}~${secQs[secQs.length-1].num}번 · ${answered}/${secQs.length} 답변</div>
+            </div>
+            <div style="font-size:12px; color:${i === ibtState.currentSection ? 'var(--accent)' : 'var(--text2)'};">${i === ibtState.currentSection ? '현재' : '이동'}</div>
+          </div>`;
+      }).join('')}
+      <button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="submitIbtExam()">시험 제출하기</button>
+      <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="exitIbtExam()">시험 포기</button>
+    </div>`;
+}
+
+function goIbtSection(secIdx) {
+  if (!ibtState) return;
+  const secName = ibtState.sections[secIdx].name;
+  const firstQ = ibtState.questions.findIndex(q => q.section === secName);
+  if (firstQ >= 0) {
+    ibtState.currentSection = secIdx;
+    ibtState.timeLeft = ibtState.sections[secIdx].time;
+    ibtState.currentQ = firstQ;
+    if (secName !== '听力') ibtState.audioPlayed = true;
+    else ibtState.audioPlayed = false;
+    renderIbtSection();
+  }
+}
+
+function submitIbtExam() {
+  if (!ibtState) return;
+  const unanswered = ibtState.userAnswers.filter(a => !a).length;
+  if (unanswered > 0 && !confirm(`미답변 ${unanswered}개가 있습니다. 제출할까요?`)) return;
+  if (ibtTimer) clearInterval(ibtTimer);
+  if (ibtState.audio) { ibtState.audio.pause(); ibtState.audio = null; }
+
+  // Grade: only listening + reading (85 questions, 1-85)
+  let totalScore = 0;
+  let sectionScores = {};
+  const results = [];
+
+  ibtState.questions.forEach((q, i) => {
+    const user = ibtState.userAnswers[i];
+    let isCorrect = false;
+
+    if (q.type === 'writing') {
+      // Writing: show reference answer, no auto-grading
+      results.push({ q, user, correct: null, ref: q.answer });
+      return;
+    }
+
+    if (q.type === 'ox') {
+      isCorrect = user === q.answer;
+    } else if (q.type === 'order3') {
+      isCorrect = user === q.answer;
+    } else {
+      isCorrect = user === q.answer;
+    }
+
+    if (!sectionScores[q.sectionKo]) sectionScores[q.sectionKo] = { total: 0, correct: 0 };
+    sectionScores[q.sectionKo].total++;
+    if (isCorrect) { sectionScores[q.sectionKo].correct++; totalScore++; }
+    results.push({ q, user, correct: isCorrect });
+  });
+
+  const objectiveTotal = results.filter(r => r.correct !== null).length;
+  const pct = objectiveTotal > 0 ? Math.round(totalScore / objectiveTotal * 100) : 0;
+
+  // Calculate HSK scores for saving
+  const listeningS = sectionScores['듣기'] ? Math.round(sectionScores['듣기'].correct / 45 * 100) : 0;
+  const readingS = sectionScores['독해'] ? Math.round(sectionScores['독해'].correct / 40 * 100) : 0;
+  const hskTotalS = listeningS + readingS;
+
+  // Save score
+  localStorage.setItem('ibt_score_' + ibtState.examId, JSON.stringify({
+    score: totalScore, total: objectiveTotal, pct,
+    hskListening: listeningS, hskReading: readingS, hskTotal: hskTotalS,
+    date: new Date().toISOString().slice(0,10)
+  }));
+
+  // Show results
+  showIbtResult(results, sectionScores, totalScore, objectiveTotal, pct);
+}
+
+function showIbtResult(results, sectionScores, totalScore, objectiveTotal, pct) {
+  document.getElementById('ibt-answer-panel').innerHTML = '';
+  document.getElementById('ibt-top-bar').style.display = 'none';
+  const body = document.getElementById('ibt-body');
+  body.style.paddingBottom = '80px';
+
+  const wrongItems = results.filter(r => r.correct === false);
+  const writingItems = results.filter(r => r.correct === null);
+
+  // HSK4 점수 환산: 듣기 100점, 독해 100점 (각 영역 만점 100점, 합산 200점 + 쓰기 100점 = 300점)
+  // 객관식만 자동채점: 듣기 45문항→100점, 독해 40문항→100점
+  const listeningScore = sectionScores['듣기'] ? Math.round(sectionScores['듣기'].correct / 45 * 100) : 0;
+  const readingScore = sectionScores['독해'] ? Math.round(sectionScores['독해'].correct / 40 * 100) : 0;
+  const hskTotal = listeningScore + readingScore; // 쓰기는 수동채점
+  const hskMax = 200; // 객관식 기준
+  const passLine = 120; // 듣기+독해 기준 합격선 (전체 180/300 비율)
+  const isPass = hskTotal >= passLine;
+
+  body.innerHTML = `
+    <div style="text-align:center; padding:24px 16px;">
+      <div style="font-size:48px; margin-bottom:8px;">${isPass ? '&#x1F389;' : '&#x1F4DA;'}</div>
+      <div style="font-size:20px; font-weight:700; margin-bottom:4px; color:${isPass ? 'var(--success)' : 'var(--danger)'};">
+        ${isPass ? '합격 예상!' : '불합격 예상'}
+      </div>
+      <div style="font-size:12px; color:var(--text2); margin-bottom:16px;">
+        HSK 4급 합격기준: 총 300점 중 180점 이상 (듣기+독해 ${passLine}점 이상 필요)
+      </div>
+
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <div style="flex:1; background:var(--card); border-radius:12px; padding:12px;">
+          <div style="font-size:24px; font-weight:700; color:${listeningScore >= 60 ? 'var(--success)' : 'var(--danger)'};">${listeningScore}</div>
+          <div style="font-size:11px; color:var(--text2);">듣기 /100</div>
+        </div>
+        <div style="flex:1; background:var(--card); border-radius:12px; padding:12px;">
+          <div style="font-size:24px; font-weight:700; color:${readingScore >= 60 ? 'var(--success)' : 'var(--danger)'};">${readingScore}</div>
+          <div style="font-size:11px; color:var(--text2);">독해 /100</div>
+        </div>
+        <div style="flex:1; background:var(--card); border-radius:12px; padding:12px;">
+          <div style="font-size:24px; font-weight:700; color:var(--warning);">?</div>
+          <div style="font-size:11px; color:var(--text2);">쓰기 /100</div>
+        </div>
+      </div>
+
+      <div style="background:var(--card); border-radius:12px; padding:14px; margin-bottom:16px;">
+        <div style="font-size:14px; font-weight:600; margin-bottom:8px;">영역별 정답률</div>
+        ${Object.entries(sectionScores).map(([name, s]) => `
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <span style="font-size:13px; color:var(--text2); min-width:32px;">${name}</span>
+            <div style="flex:1; height:8px; background:#333; border-radius:4px; overflow:hidden;">
+              <div style="height:100%; width:${s.total ? Math.round(s.correct/s.total*100) : 0}%; background:var(--accent); border-radius:4px;"></div>
+            </div>
+            <span style="font-size:12px; color:var(--text2); min-width:48px; text-align:right;">${s.correct}/${s.total}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    ${wrongItems.length > 0 ? `
+      <div style="background:var(--card); border-radius:12px; padding:14px; margin:0 16px 16px;">
+        <div style="font-size:14px; font-weight:600; color:var(--danger); margin-bottom:10px;">틀린 문제 (${wrongItems.length}개)</div>
+        ${wrongItems.map(r => `
+          <div style="padding:6px 0; border-bottom:1px solid #222; font-size:13px;">
+            <span style="color:var(--text2);">${r.q.num}번</span>
+            <span style="color:var(--danger); margin-left:8px;">${r.user || '미답변'}</span>
+            <span style="color:var(--text2); margin:0 4px;">→</span>
+            <span style="color:var(--success);">${r.q.answer}</span>
+          </div>`).join('')}
+      </div>` : ''}
+
+    ${writingItems.length > 0 ? `
+      <div style="background:var(--card); border-radius:12px; padding:14px; margin:0 16px 16px;">
+        <div style="font-size:14px; font-weight:600; color:var(--warning); margin-bottom:10px;">쓰기 (참고답안)</div>
+        ${writingItems.map(r => `
+          <div style="padding:6px 0; border-bottom:1px solid #222; font-size:13px;">
+            <div style="color:var(--text2);">${r.q.num}번</div>
+            <div style="color:var(--text); margin-top:2px;">내 답: ${r.user || '(미작성)'}</div>
+            <div style="color:var(--success); margin-top:2px;">참고: ${r.ref}</div>
+          </div>`).join('')}
+      </div>` : ''}
+
+    <div style="display:flex; gap:8px; padding:0 16px 20px;">
+      <button class="btn btn-primary" onclick="exitIbtExam()" style="flex:1;">돌아가기</button>
+    </div>`;
+}
+
+function exitIbtExam() {
+  if (ibtTimer) clearInterval(ibtTimer);
+  if (ibtState && ibtState.audio) { ibtState.audio.pause(); ibtState.audio = null; }
+  ibtState = null;
+  document.getElementById('ibt-main').style.display = 'block';
+  document.getElementById('ibt-exam').style.display = 'none';
+  document.getElementById('ibt-top-bar').style.display = 'flex';
+  document.getElementById('ibt-body').style.paddingBottom = '200px';
+  renderIbtExamList();
+}
+
 // =================== INIT ===================
 loadData();
 loadHskWords();
@@ -4021,13 +5033,13 @@ if ('serviceWorker' in navigator) {
     });
   }).catch(() => {});
   if (window.caches) {
-    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v21') caches.delete(k); }));
+    caches.keys().then(keys => keys.forEach(k => { if (k !== 'hsk4-v26') caches.delete(k); }));
   }
 }
 
 // 버전 체크: 네트워크에서 직접 version.json을 가져와 현재 버전과 비교
 (function checkUpdate() {
-  const currentV = '25';
+  const currentV = '26';
   fetch('version.json?_=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(data => {
     if (data.v && data.v !== currentV) {
       // 새 버전 발견 - SW 캐시 전부 삭제 후 새로고침
